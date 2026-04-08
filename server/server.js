@@ -18,7 +18,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // local dev
-      "https://online-exam-portal-self.vercel.app" // deployed frontend
+      "https://tgpexamportal.netlify.app" // deployed frontend
     ],
     credentials: true,
   })
