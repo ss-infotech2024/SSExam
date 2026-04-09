@@ -9,6 +9,42 @@ import {
   FiChevronRight, FiInbox, FiStar, FiUsers,
 } from "react-icons/fi";
 
+// ─── IST Timezone Helpers ─────────────────────────────────────────────────────
+
+/**
+ * Formats a UTC ISO string from DB → readable IST datetime string.
+ * e.g. "2025-04-09T11:20:00.000Z"  →  "09 Apr 2025, 04:50 PM IST"
+ */
+const formatIST = (isoString) => {
+  if (!isoString) return "—";
+  return (
+    new Date(isoString).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day:      "2-digit",
+      month:    "short",
+      year:     "numeric",
+      hour:     "2-digit",
+      minute:   "2-digit",
+      hour12:   true,
+    }) + " IST"
+  );
+};
+
+/**
+ * Formats a UTC ISO string → date-only IST string.
+ * e.g. "2025-04-09T11:20:00.000Z"  →  "09 Apr 2025"
+ */
+const formatDateIST = (isoString) => {
+  if (!isoString) return "—";
+  return new Date(isoString).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day:      "2-digit",
+    month:    "short",
+    year:     "numeric",
+  });
+};
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, type, onClose }) => (
   <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5
     rounded-xl shadow-2xl text-sm font-semibold max-w-sm
@@ -21,6 +57,7 @@ const Toast = ({ message, type, onClose }) => (
   </div>
 );
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS = {
   upcoming:  { label: "Upcoming",  bg: "bg-blue-100",  text: "text-blue-700",  dot: "bg-blue-500"  },
   active:    { label: "Live Now",  bg: "bg-green-100", text: "text-green-700", dot: "bg-green-500" },
@@ -34,15 +71,7 @@ const DEPT_STYLE = {
   ECE: { bg: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
 };
 
-const fmt = (d) => d ? new Date(d).toLocaleString("en-IN", {
-  day:"2-digit", month:"short", year:"numeric",
-  hour:"2-digit", minute:"2-digit", hour12:true,
-}) : "—";
-
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", {
-  day:"2-digit", month:"short", year:"numeric",
-}) : "—";
-
+// ─── Delete Modal ─────────────────────────────────────────────────────────────
 const DeleteModal = ({ exam, onConfirm, onCancel, loading }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -55,12 +84,14 @@ const DeleteModal = ({ exam, onConfirm, onCancel, loading }) => (
         This cannot be undone.
       </p>
       <div className="flex gap-3">
-        <button onClick={onCancel}
-          className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm
-            font-semibold text-gray-600 hover:bg-gray-50">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">
           Cancel
         </button>
-        <button onClick={onConfirm} disabled={loading}
+        <button
+          onClick={onConfirm}
+          disabled={loading}
           className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl
             text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
           {loading
@@ -74,9 +105,9 @@ const DeleteModal = ({ exam, onConfirm, onCancel, loading }) => (
 
 // ═════════════════════════════════════════════════════════════════════════════
 const ExamList = () => {
-  const navigate  = useNavigate();
-  const dispatch  = useDispatch();
-  const { list: exams, loading, actionLoading, actionError } = useSelector(s => s.exams);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { list: exams, loading, actionLoading, actionError } = useSelector((s) => s.exams);
 
   useEffect(() => {
     const role  = localStorage.getItem("userRole");
@@ -112,16 +143,16 @@ const ExamList = () => {
     }
   };
 
-  const filtered = exams.filter(e =>
+  const filtered = exams.filter((e) =>
     (statusFilter === "all" || e.status === statusFilter) &&
     (!search.trim() || e.subject.toLowerCase().includes(search.toLowerCase()))
   );
 
   const stats = {
     total:     exams.length,
-    upcoming:  exams.filter(e => e.status === "upcoming").length,
-    active:    exams.filter(e => e.status === "active").length,
-    completed: exams.filter(e => e.status === "completed").length,
+    upcoming:  exams.filter((e) => e.status === "upcoming").length,
+    active:    exams.filter((e) => e.status === "active").length,
+    completed: exams.filter((e) => e.status === "completed").length,
   };
 
   return (
@@ -140,7 +171,7 @@ const ExamList = () => {
 
       <div className="max-w-7xl mx-auto">
 
-        {/* ── HEADER ─────────────────────────────────────────────────────── */}
+        {/* ── HEADER ──────────────────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Exams</h1>
@@ -166,7 +197,7 @@ const ExamList = () => {
           </div>
         </div>
 
-        {/* ── STAT CARDS ─────────────────────────────────────────────────── */}
+        {/* ── STAT CARDS ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total Exams", value: stats.total,     icon: FiBookOpen,    color: "text-gray-700",  bg: "bg-gray-100"  },
@@ -197,7 +228,7 @@ const ExamList = () => {
               type="text"
               placeholder="Search by subject…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm
                 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             />
@@ -210,7 +241,7 @@ const ExamList = () => {
             )}
           </div>
           <div className="flex gap-2">
-            {["all","upcoming","active","completed"].map(s => (
+            {["all", "upcoming", "active", "completed"].map((s) => (
               <button key={s} onClick={() => setStatusFilter(s)}
                 className={`px-4 py-2.5 rounded-xl text-xs font-bold capitalize transition-colors
                   ${statusFilter === s
@@ -222,7 +253,7 @@ const ExamList = () => {
           </div>
         </div>
 
-        {/* ── TABLE ──────────────────────────────────────────────────────── */}
+        {/* ── TABLE ───────────────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
           {/* Toolbar */}
@@ -286,8 +317,8 @@ const ExamList = () => {
                     {[
                       "Subject", "Status", "Questions",
                       "Marks/Q", "Total Marks", "Duration",
-                      "Start Time", "Actions",
-                    ].map(h => (
+                      "Start Time", "End Time", "Actions",
+                    ].map((h) => (
                       <th key={h}
                         className="px-5 py-3 text-left text-xs font-bold text-gray-400
                           uppercase tracking-wider whitespace-nowrap">
@@ -297,7 +328,7 @@ const ExamList = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {filtered.map(exam => {
+                  {filtered.map((exam) => {
                     const s          = STATUS[exam.status] || STATUS.upcoming;
                     const totalMarks = (exam.questionCount ?? 0) * (exam.marksPerQuestion ?? 1);
                     return (
@@ -312,8 +343,9 @@ const ExamList = () => {
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-gray-800">{exam.subject}</p>
+                              {/* ✅ IST fix: createdAt date */}
                               <p className="text-xs text-gray-400 mt-0.5">
-                                Created {fmtDate(exam.createdAt)}
+                                Created {formatDateIST(exam.createdAt)}
                               </p>
                             </div>
                           </div>
@@ -357,9 +389,14 @@ const ExamList = () => {
                           </span>
                         </td>
 
-                        {/* Start Time */}
+                        {/* ✅ Start Time — IST */}
                         <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">
-                          {fmt(exam.startTime)}
+                          {formatIST(exam.startTime)}
+                        </td>
+
+                        {/* ✅ End Time — IST (new column) */}
+                        <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">
+                          {formatIST(exam.endTime)}
                         </td>
 
                         {/* Actions */}
@@ -382,14 +419,14 @@ const ExamList = () => {
                               <FiTrash2 className="w-3.5 h-3.5" /> Delete
                             </button>
 
-                            {/* ✅ View Attempts — uses real exam._id */}
-                                                  <button
-                        onClick={() => navigate(`/admin/exams/${exam._id}/attempts`)}
-                        title="View student attempts"
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold
-                          text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
-                        <FiUsers className="w-3.5 h-3.5" /> Attempts
-                      </button> 
+                            {/* View Attempts */}
+                            <button
+                              onClick={() => navigate(`/admin/exams/${exam._id}/attempts`)}
+                              title="View student attempts"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold
+                                text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                              <FiUsers className="w-3.5 h-3.5" /> Attempts
+                            </button>
 
                           </div>
                         </td>
