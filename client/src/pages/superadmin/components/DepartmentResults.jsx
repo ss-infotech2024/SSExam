@@ -142,12 +142,12 @@ const DepartmentResults = () => {
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t flex justify-center">
+        {/* <div className="mt-6 pt-4 border-t flex justify-center">
           <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
             <Eye className="w-4 h-4" />
             View Full Report
           </button>
-        </div>
+        </div> */}
       </div>
     );
   };

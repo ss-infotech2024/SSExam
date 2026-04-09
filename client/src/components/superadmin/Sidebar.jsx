@@ -26,13 +26,10 @@ const Sidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/superadmin/dashboard" },
+    // { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/superadmin/dashboard" },
     { id: "admins", label: "Admin Management", icon: UserCog, path: "/superadmin/admins" },
-    { id: "students", label: "Student Data", icon: GraduationCap, path: "/superadmin/students" },
+    { id: "students", label: "Student Counts", icon: GraduationCap, path: "/superadmin/students" },
     { id: "departments", label: "Department Results", icon: Building2, path: "/superadmin/departments" },
-    { id: "exams", label: "All Exams", icon: BookOpen, path: "/superadmin/exams" },
-    { id: "results", label: "Global Results", icon: TrendingUp, path: "/superadmin/results" },
-    { id: "analytics", label: "Analytics", icon: BarChart3, path: "/superadmin/analytics" },
   ];
 
   const handleNavigation = (item) => {
@@ -139,26 +136,7 @@ const Sidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen }) => {
 
       {/* Bottom Section */}
       <div className="border-t border-gray-700/50">
-        {/* User Profile Section */}
-        {sidebarOpen && (
-          <div className="p-4 bg-gray-800/30 m-4 rounded-xl">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0D8F81&color=fff&size=40&bold=true`} 
-                  alt="Profile" 
-                  className="w-10 h-10 rounded-full ring-2 ring-blue-500"
-                />
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-gray-800"></div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{userName}</p>
-                <p className="text-xs text-gray-400 truncate">{userEmail}</p>
-                <p className="text-xs text-blue-400 mt-0.5">{userRole}</p>
-              </div>
-            </div>
-          </div>
-        )}
+      
 
         {/* Logout Button */}
         <div className="p-4">

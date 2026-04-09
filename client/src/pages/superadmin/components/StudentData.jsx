@@ -218,7 +218,7 @@ const StudentData = () => {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+              {/* <div className="mt-6 grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-lg font-semibold">{dept.totalExams}</p>
                   <p className="text-xs text-gray-500">Exams</p>
@@ -231,7 +231,7 @@ const StudentData = () => {
                   <p className="text-lg font-semibold text-emerald-600">{dept.passRate}%</p>
                   <p className="text-xs text-gray-500">Pass Rate</p>
                 </div>
-              </div>
+              </div> */}
             </div>
           ))}
         </div>

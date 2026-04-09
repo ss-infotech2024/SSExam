@@ -5,7 +5,7 @@ import { loginSuccess } from "../store/slices/authSlice";
 import API from "../services/api";
 import { Eye, EyeOff, GraduationCap, Shield, Crown, Loader2 } from "lucide-react";
 
-const DEPARTMENTS = ["IT", "CS", "CE", "ECE"];
+const DEPARTMENTS = ['IT', 'CS', 'CE', 'ECE', 'ME', 'CIVIL', 'EC', 'EE'];
 
 const ROLES = [
   {

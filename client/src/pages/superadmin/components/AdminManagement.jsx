@@ -1,5 +1,4 @@
 // pages/superadmin/components/AdminManagement.jsx
-// Updated: replaced local axios + useState with Redux adminSlice
 
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,11 +12,15 @@ import {
   CheckCircle, XCircle, RefreshCw, X, AlertCircle, Loader2,
 } from "lucide-react";
 
-const DEPARTMENTS = ["IT", "CS", "CE", "ECE"];
+const DEPARTMENTS = ['IT', 'CS', 'CE', 'ECE', 'ME', 'CIVIL', 'EC', 'EE'];
 
 // ─── Toast ─────────────────────────────────────────────────────────────────────
 const Toast = ({ msg, type, onClose }) => {
-  useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, [onClose]);
+  useEffect(() => { 
+    const t = setTimeout(onClose, 3500); 
+    return () => clearTimeout(t); 
+  }, [onClose]);
+
   return (
     <div className={`fixed top-5 right-5 z-[100] flex items-center gap-2.5 px-5 py-3
       rounded-xl shadow-2xl text-sm font-semibold border
@@ -49,7 +52,6 @@ const Field = ({ label, required, error, children }) => (
 // ─── ADD / EDIT MODAL ──────────────────────────────────────────────────────────
 const AdminFormModal = ({ editAdmin, onClose, onSaved }) => {
   const dispatch = useDispatch();
-  // Only read loading + actionError from Redux — admins list is managed by parent
   const { loading, actionError } = useSelector(s => s.admins);
   const isEdit = !!editAdmin;
 
@@ -61,12 +63,10 @@ const AdminFormModal = ({ editAdmin, onClose, onSaved }) => {
   });
   const [errors, setErrors] = useState({});
 
-  // Push redux API error into local field errors
   useEffect(() => {
     if (actionError) setErrors(p => ({ ...p, _api: actionError }));
   }, [actionError]);
 
-  // Clear actionError on unmount
   useEffect(() => () => dispatch(clearActionError()), [dispatch]);
 
   const validate = () => {
@@ -115,26 +115,33 @@ const AdminFormModal = ({ editAdmin, onClose, onSaved }) => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errors._api && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg
-              text-sm flex items-center gap-2">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {errors._api}
             </div>
           )}
 
           <Field label="Email Address" required error={errors.email}>
-            <input type="email" name="email" value={form.email} onChange={handleChange}
-              placeholder="admin@example.com" disabled={loading}
-              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none
-                focus:ring-2 focus:ring-blue-500
-                ${errors.email ? "border-red-400" : "border-gray-300"}`} />
+            <input 
+              type="email" 
+              name="email" 
+              value={form.email} 
+              onChange={handleChange}
+              placeholder="admin@example.com" 
+              disabled={loading}
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500
+                ${errors.email ? "border-red-400" : "border-gray-300"}`} 
+            />
           </Field>
 
           <Field label="Department" required error={errors.department}>
-            <select name="department" value={form.department} onChange={handleChange}
+            <select 
+              name="department" 
+              value={form.department} 
+              onChange={handleChange}
               disabled={loading}
-              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none
-                focus:ring-2 focus:ring-blue-500
-                ${errors.department ? "border-red-400" : "border-gray-300"}`}>
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500
+                ${errors.department ? "border-red-400" : "border-gray-300"}`}
+            >
               <option value="">— Select Department —</option>
               {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -142,19 +149,29 @@ const AdminFormModal = ({ editAdmin, onClose, onSaved }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label={isEdit ? "New Password (optional)" : "Password"} required={!isEdit} error={errors.password}>
-              <input type="password" name="password" value={form.password}
-                onChange={handleChange} placeholder="••••••••" disabled={loading}
-                className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none
-                  focus:ring-2 focus:ring-blue-500
-                  ${errors.password ? "border-red-400" : "border-gray-300"}`} />
+              <input 
+                type="password" 
+                name="password" 
+                value={form.password}
+                onChange={handleChange} 
+                placeholder="••••••••" 
+                disabled={loading}
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500
+                  ${errors.password ? "border-red-400" : "border-gray-300"}`} 
+              />
             </Field>
             {!isEdit && (
               <Field label="Confirm Password" required error={errors.confirmPassword}>
-                <input type="password" name="confirmPassword" value={form.confirmPassword}
-                  onChange={handleChange} placeholder="••••••••" disabled={loading}
-                  className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none
-                    focus:ring-2 focus:ring-blue-500
-                    ${errors.confirmPassword ? "border-red-400" : "border-gray-300"}`} />
+                <input 
+                  type="password" 
+                  name="confirmPassword" 
+                  value={form.confirmPassword}
+                  onChange={handleChange} 
+                  placeholder="••••••••" 
+                  disabled={loading}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500
+                    ${errors.confirmPassword ? "border-red-400" : "border-gray-300"}`} 
+                />
               </Field>
             )}
           </div>
@@ -165,15 +182,19 @@ const AdminFormModal = ({ editAdmin, onClose, onSaved }) => {
           </div>
 
           <div className="flex gap-3 pt-2 border-t">
-            <button type="button" onClick={onClose} disabled={loading}
-              className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold
-                text-gray-600 hover:bg-gray-50 transition-colors">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              disabled={loading}
+              className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading}
-              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold
-                hover:bg-blue-700 transition-colors flex items-center justify-center gap-2
-                disabled:opacity-50">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" />{isEdit ? "Saving…" : "Creating…"}</>
                 : <><UserPlus className="w-4 h-4" />{isEdit ? "Save Changes" : "Create Admin"}</>}
@@ -197,20 +218,15 @@ const ViewModal = ({ admin, onClose, onEdit }) => (
       </div>
       <div className="p-6 space-y-5">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600
-            flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
             {(admin.name || admin.email || "A")[0].toUpperCase()}
           </div>
           <div>
             <p className="text-lg font-bold text-gray-900">{admin.name || "—"}</p>
             <p className="text-sm text-gray-500">{admin.email}</p>
-            <span className={`inline-flex items-center gap-1.5 mt-1 text-xs font-bold
-              px-2.5 py-1 rounded-full
-              ${admin.status === "active"
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-500"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full
-                ${admin.status === "active" ? "bg-green-500" : "bg-gray-400"}`} />
+            <span className={`inline-flex items-center gap-1.5 mt-1 text-xs font-bold px-2.5 py-1 rounded-full
+              ${admin.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${admin.status === "active" ? "bg-green-500" : "bg-gray-400"}`} />
               {admin.status}
             </span>
           </div>
@@ -218,12 +234,9 @@ const ViewModal = ({ admin, onClose, onEdit }) => (
 
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Department",  val: admin.department || "—" },
-            { label: "Join Date",   val: admin.joinDate   || "—" },
-            { label: "Students",    val: admin.students   ?? 0   },
-            { label: "Exams",       val: admin.exams      ?? 0   },
-            { label: "Last Active", val: admin.lastActive || "—" },
-            { label: "Admin ID",    val: admin._id ? admin._id.toString().slice(-8).toUpperCase() : "—" },
+            { label: "Department", val: admin.department || "—" },
+            { label: "Join Date",  val: admin.joinDate   || "—" },
+            { label: "Admin ID",   val: admin._id ? admin._id.toString().slice(-8).toUpperCase() : "—" },
           ].map(({ label, val }) => (
             <div key={label} className="bg-gray-50 border border-gray-100 rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-0.5">{label}</p>
@@ -233,14 +246,13 @@ const ViewModal = ({ admin, onClose, onEdit }) => (
         </div>
 
         <div className="flex gap-3 border-t pt-4">
-          <button onClick={onClose}
-            className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold
-              text-gray-600 hover:bg-gray-50 transition-colors">
+          <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
             Close
           </button>
-          <button onClick={() => { onClose(); onEdit(admin); }}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold
-              hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={() => { onClose(); onEdit(admin); }}
+            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors"
+          >
             Edit Admin
           </button>
         </div>
@@ -269,7 +281,7 @@ const DeleteModal = ({ admin, onClose, onDeleted }) => {
         </div>
         <h2 className="text-lg font-bold text-center text-gray-800 mb-2">Delete Admin</h2>
         <p className="text-gray-500 text-center text-sm mb-5">
-          Are you sure you want to delete <strong>{admin.name || admin.email}</strong>?
+          Are you sure you want to delete <strong>{admin.name || admin.email}</strong>? 
           This action cannot be undone.
         </p>
         {actionError && (
@@ -279,17 +291,12 @@ const DeleteModal = ({ admin, onClose, onDeleted }) => {
         )}
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
-            className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold
-              text-gray-600 hover:bg-gray-50 transition-colors">
+            className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
             Cancel
           </button>
           <button onClick={confirm} disabled={loading}
-            className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold
-              hover:bg-red-700 transition-colors flex items-center justify-center gap-2
-              disabled:opacity-50">
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Deleting…</>
-              : "Delete"}
+            className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Deleting…</> : "Delete"}
           </button>
         </div>
       </div>
@@ -302,39 +309,37 @@ const DeleteModal = ({ admin, onClose, onDeleted }) => {
 // ═════════════════════════════════════════════════════════════════════════════
 const AdminManagement = () => {
   const dispatch = useDispatch();
-  // ── All admin data comes from Redux store now ──────────────────────────────
   const { list: admins, loading, error } = useSelector(s => s.admins);
 
-  const [toast,          setToast]        = useState(null);
-  const [addOpen,        setAddOpen]      = useState(false);
-  const [editAdmin,      setEditAdmin]    = useState(null);
-  const [viewAdmin,      setViewAdmin]    = useState(null);
-  const [deleteTarget,   setDeleteTarget] = useState(null);
-  const [search,         setSearch]       = useState("");
-  const [deptFilter,     setDeptFilter]   = useState("all");
-  const [statusFilter,   setStatusFilter] = useState("all");
-  const [page,           setPage]         = useState(1);
+  const [toast,        setToast]      = useState(null);
+  const [addOpen,      setAddOpen]    = useState(false);
+  const [editAdmin,    setEditAdmin]  = useState(null);
+  const [viewAdmin,    setViewAdmin]  = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search,       setSearch]     = useState("");
+  const [deptFilter,   setDeptFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page,         setPage]       = useState(1);
+
   const PER_PAGE = 5;
 
-  // Load on mount
-  useEffect(() => { dispatch(fetchAdmins()); }, [dispatch]);
+  useEffect(() => { 
+    dispatch(fetchAdmins()); 
+  }, [dispatch]);
 
   const showToast = (msg, type = "success") => setToast({ msg, type });
 
-  // ── After create/update — Redux already updated the list via extraReducers ──
   const handleSaved = (action) => {
     setAddOpen(false);
     setEditAdmin(null);
     showToast(action === "created" ? "Admin created successfully!" : "Admin updated successfully!");
   };
 
-  // ── After delete — Redux already removed from list ──────────────────────────
   const handleDeleted = () => {
     setDeleteTarget(null);
     showToast("Admin deleted successfully!");
   };
 
-  // ── Toggle status ───────────────────────────────────────────────────────────
   const handleToggleStatus = async (admin) => {
     const newStatus = admin.status === "active" ? "inactive" : "active";
     const res = await dispatch(toggleAdminStatus({ id: admin._id, status: newStatus }));
@@ -345,26 +350,28 @@ const AdminManagement = () => {
     }
   };
 
-  // ── Filter + paginate ───────────────────────────────────────────────────────
+  // Filter + Paginate
   const filtered = admins.filter(a => {
-    const q   = search.toLowerCase();
-    const ms  = !q || (a.name || "").toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
-    const md  = deptFilter   === "all" || a.department === deptFilter;
-    const mst = statusFilter === "all" || a.status     === statusFilter;
-    return ms && md && mst;
+    const q = search.toLowerCase();
+    const matchSearch = !q || (a.name || "").toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+    const matchDept   = deptFilter === "all" || a.department === deptFilter;
+    const matchStatus = statusFilter === "all" || a.status === statusFilter;
+    return matchSearch && matchDept && matchStatus;
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const pageItems  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const resetFilters = () => {
-    setSearch(""); setDeptFilter("all"); setStatusFilter("all"); setPage(1);
+    setSearch(""); 
+    setDeptFilter("all"); 
+    setStatusFilter("all"); 
+    setPage(1);
   };
 
-  // ── Stats ───────────────────────────────────────────────────────────────────
-  const activeCount   = admins.filter(a => a.status === "active").length;
-  const deptCount     = new Set(admins.map(a => a.department).filter(Boolean)).size;
-  const totalStudents = admins.reduce((s, a) => s + (a.students || 0), 0);
+  // Stats (Updated - removed student/exam counts)
+  const activeCount = admins.filter(a => a.status === "active").length;
+  const deptCount   = new Set(admins.map(a => a.department).filter(Boolean)).size;
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -378,25 +385,27 @@ const AdminManagement = () => {
           <p className="text-gray-400 text-sm mt-0.5">Manage department administrators</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => dispatch(fetchAdmins())}
-            className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => dispatch(fetchAdmins())}
+            className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+          >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
-          <button onClick={() => setAddOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl
-              text-sm font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-200">
+          <button 
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-200"
+          >
             <Plus className="w-4 h-4" /> Add Admin
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { label: "Total Admins",     val: loading ? "—" : admins.length,  color: "text-gray-800",   bg: "bg-gray-50"   },
-          { label: "Active",           val: loading ? "—" : activeCount,    color: "text-green-700",  bg: "bg-green-50"  },
-          { label: "Departments",      val: loading ? "—" : deptCount,      color: "text-blue-700",   bg: "bg-blue-50"   },
-          { label: "Students Managed", val: loading ? "—" : totalStudents,  color: "text-purple-700", bg: "bg-purple-50" },
+          { label: "Total Admins", val: loading ? "—" : admins.length, color: "text-gray-800", bg: "bg-gray-50" },
+          { label: "Active Admins", val: loading ? "—" : activeCount, color: "text-green-700", bg: "bg-green-50" },
+          { label: "Departments", val: loading ? "—" : deptCount, color: "text-blue-700", bg: "bg-blue-50" },
         ].map(({ label, val, color, bg }) => (
           <div key={label} className={`${bg} border border-gray-100 rounded-2xl p-5`}>
             <p className="text-xs text-gray-400 font-medium">{label}</p>
@@ -405,13 +414,12 @@ const AdminManagement = () => {
         ))}
       </div>
 
-      {/* Global fetch error */}
+      {/* Global Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
           <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
           <p className="text-sm text-red-700">{error}</p>
-          <button onClick={() => dispatch(fetchAdmins())}
-            className="ml-auto text-xs text-red-600 underline font-medium">Retry</button>
+          <button onClick={() => dispatch(fetchAdmins())} className="ml-auto text-xs text-red-600 underline font-medium">Retry</button>
         </div>
       )}
 
@@ -419,39 +427,52 @@ const AdminManagement = () => {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-wrap gap-3 shadow-sm">
         <div className="flex-1 min-w-[200px] flex items-center border border-gray-200 rounded-xl px-3 py-2.5 gap-2">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search by name or email…"
-            className="flex-1 outline-none text-sm bg-transparent" />
-          {search && (
-            <button onClick={() => setSearch("")}><X className="w-3.5 h-3.5 text-gray-400" /></button>
-          )}
+          <input 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search by name or email…" 
+            className="flex-1 outline-none text-sm bg-transparent" 
+          />
+          {search && <button onClick={() => setSearch("")}><X className="w-3.5 h-3.5 text-gray-400" /></button>}
         </div>
-        <select value={deptFilter} onChange={e => { setDeptFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none
-            focus:ring-2 focus:ring-blue-400">
+
+        <select 
+          value={deptFilter} 
+          onChange={e => { setDeptFilter(e.target.value); setPage(1); }}
+          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+        >
           <option value="all">All Departments</option>
           {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none
-            focus:ring-2 focus:ring-blue-400">
+
+        <select 
+          value={statusFilter} 
+          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+        >
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
-        <button onClick={resetFilters} title="Reset filters"
-          className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors">
+
+        <button onClick={resetFilters} className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors">
           <RefreshCw className="w-4 h-4" />
         </button>
-        <button title="Export CSV" onClick={() => {
-          const csv = [
-            ["Email", "Department", "Status", "Students", "Exams", "Join Date"],
-            ...filtered.map(a => [a.email, a.department, a.status, a.students, a.exams, a.joinDate])
-          ].map(r => r.join(",")).join("\n");
-          const el = document.createElement("a");
-          el.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-          el.download = "admins.csv"; el.click();
-        }} className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors">
+
+        <button 
+          onClick={() => {
+            const csv = [
+              ["Email", "Department", "Status", "Join Date"],
+              ...filtered.map(a => [a.email, a.department, a.status, a.joinDate])
+            ].map(r => r.join(",")).join("\n");
+            
+            const el = document.createElement("a");
+            el.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            el.download = "admins.csv"; 
+            el.click();
+          }} 
+          className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+        >
           <Download className="w-4 h-4" />
         </button>
       </div>
@@ -467,9 +488,7 @@ const AdminManagement = () => {
           <div className="py-20 text-center text-gray-400">
             <p className="font-semibold">No admins found</p>
             <p className="text-sm mt-1">
-              {search || deptFilter !== "all" || statusFilter !== "all"
-                ? "Try different filters"
-                : "Click 'Add Admin' to get started"}
+              {search || deptFilter !== "all" || statusFilter !== "all" ? "Try different filters" : "Click 'Add Admin' to get started"}
             </p>
           </div>
         ) : (
@@ -477,20 +496,20 @@ const AdminManagement = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-left">
-                  {["Admin", "Department", "Students", "Exams", "Join Date", "Status", "Last Active", "Actions"].map(h => (
-                    <th key={h} className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wide">{h}</th>
+                  {["Admin", "Department", "Join Date", "Status", "Actions"].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {pageItems.map(admin => (
                   <tr key={admin._id} className="hover:bg-gray-50/70 transition-colors">
-
                     {/* Admin */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600
-                          flex items-center justify-center text-white text-sm font-bold shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
                           {(admin.name || admin.email || "A")[0].toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -500,47 +519,41 @@ const AdminManagement = () => {
                       </div>
                     </td>
 
-                    {/* Dept */}
+                    {/* Department */}
                     <td className="px-5 py-4">
-                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100
-                        rounded-lg text-xs font-bold">
+                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold">
                         {admin.department || "—"}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4 text-sm font-semibold text-gray-700">{admin.students ?? 0}</td>
-                    <td className="px-5 py-4 text-sm font-semibold text-gray-700">{admin.exams    ?? 0}</td>
-                    <td className="px-5 py-4 text-xs text-gray-500">{admin.joinDate  || "—"}</td>
+                    {/* Join Date */}
+                    <td className="px-5 py-4 text-xs text-gray-500">{admin.joinDate || "—"}</td>
 
-                    {/* Status toggle */}
+                    {/* Status */}
                     <td className="px-5 py-4">
-                      <button onClick={() => handleToggleStatus(admin)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                          text-xs font-bold transition-colors cursor-pointer
+                      <button 
+                        onClick={() => handleToggleStatus(admin)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer
                           ${admin.status === "active"
                             ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                            : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                      >
                         {admin.status === "active"
                           ? <><CheckCircle className="w-3 h-3" /> Active</>
-                          : <><XCircle    className="w-3 h-3" /> Inactive</>}
+                          : <><XCircle className="w-3 h-3" /> Inactive</>}
                       </button>
                     </td>
-
-                    <td className="px-5 py-4 text-xs text-gray-400">{admin.lastActive || "—"}</td>
 
                     {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex gap-1">
-                        <button onClick={() => setViewAdmin(admin)} title="View"
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
+                        <button onClick={() => setViewAdmin(admin)} title="View" className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setEditAdmin(admin)} title="Edit"
-                          className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors">
+                        <button onClick={() => setEditAdmin(admin)} title="Edit" className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setDeleteTarget(admin)} title="Delete"
-                          className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
+                        <button onClick={() => setDeleteTarget(admin)} title="Delete" className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -554,29 +567,33 @@ const AdminManagement = () => {
 
         {/* Pagination */}
         {!loading && filtered.length > PER_PAGE && (
-          <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex flex-wrap
-            items-center justify-between gap-3">
+          <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
             <p className="text-xs text-gray-500">
               Showing {(page-1)*PER_PAGE+1}–{Math.min(page*PER_PAGE, filtered.length)} of {filtered.length}
             </p>
             <div className="flex gap-1.5">
-              <button onClick={() => setPage(p => Math.max(p-1, 1))} disabled={page === 1}
-                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-100
-                  disabled:opacity-40 transition-colors">
+              <button 
+                onClick={() => setPage(p => Math.max(p-1, 1))} 
+                disabled={page === 1}
+                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
+              >
                 Previous
               </button>
               {[...Array(totalPages)].map((_, i) => (
-                <button key={i} onClick={() => setPage(i+1)}
+                <button 
+                  key={i} 
+                  onClick={() => setPage(i+1)}
                   className={`px-3 py-1.5 text-xs rounded-lg transition-colors
-                    ${page === i+1
-                      ? "bg-blue-600 text-white font-bold"
-                      : "border border-gray-200 hover:bg-gray-100"}`}>
+                    ${page === i+1 ? "bg-blue-600 text-white font-bold" : "border border-gray-200 hover:bg-gray-100"}`}
+                >
                   {i+1}
                 </button>
               ))}
-              <button onClick={() => setPage(p => Math.min(p+1, totalPages))} disabled={page === totalPages}
-                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-100
-                  disabled:opacity-40 transition-colors">
+              <button 
+                onClick={() => setPage(p => Math.min(p+1, totalPages))} 
+                disabled={page === totalPages}
+                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
+              >
                 Next
               </button>
             </div>
@@ -585,10 +602,10 @@ const AdminManagement = () => {
       </div>
 
       {/* Modals */}
-      {addOpen      && <AdminFormModal editAdmin={null}        onClose={() => setAddOpen(false)}      onSaved={handleSaved}   />}
-      {editAdmin    && <AdminFormModal editAdmin={editAdmin}   onClose={() => setEditAdmin(null)}      onSaved={handleSaved}   />}
-      {viewAdmin    && <ViewModal      admin={viewAdmin}       onClose={() => setViewAdmin(null)}      onEdit={setEditAdmin}   />}
-      {deleteTarget && <DeleteModal   admin={deleteTarget}    onClose={() => setDeleteTarget(null)}   onDeleted={handleDeleted} />}
+      {addOpen && <AdminFormModal editAdmin={null} onClose={() => setAddOpen(false)} onSaved={handleSaved} />}
+      {editAdmin && <AdminFormModal editAdmin={editAdmin} onClose={() => setEditAdmin(null)} onSaved={handleSaved} />}
+      {viewAdmin && <ViewModal admin={viewAdmin} onClose={() => setViewAdmin(null)} onEdit={setEditAdmin} />}
+      {deleteTarget && <DeleteModal admin={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={handleDeleted} />}
     </div>
   );
 };
