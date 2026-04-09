@@ -7,7 +7,7 @@ import {
   Star, Award, TrendingUp, FileText,
 } from "lucide-react";
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "https://onlineexamportal-uvvx.onrender.com/api" });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "https://tgpexambackend.onrender.com/api" });
 api.interceptors.request.use(cfg => {
   const t = localStorage.getItem("token");
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
