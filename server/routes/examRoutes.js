@@ -13,6 +13,6 @@ router.get('/exams',  getStudentExams);
 router.get('/exams/:id',  getStudentExamById);
 router.get('/exams/:id/attempt-status',  getAttemptStatus);
 router.post('/exams/:id/submit',  submitExam);
-router.get('/results',  getStudentResults);
+router.get('/results', getStudentResults);
 
 export default router;

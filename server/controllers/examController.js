@@ -294,31 +294,68 @@ export const getStudentExamById = async (req, res) => {
 // POST /api/student/exams/:id/submit
 // =============================================================================
 // controllers/examController.js → Replace submitExam with this improved version
+// controllers/examController.js - Fixed submitExam function
+
+// controllers/examController.js - Complete fixed submitExam function
+
+// controllers/examController.js
+// =============================================================================
+// POST /api/student/exams/:id/submit - COMPLETE FIXED VERSION
+// =============================================================================
 
 export const submitExam = async (req, res) => {
   try {
+    console.log("=== SUBMIT EXAM START ===");
+    console.log("Exam ID:", req.params.id);
+    console.log("User ID:", req.user?._id || req.user?.id);
+    
+    // 1. Get authenticated student
     const student = await User.findById(req.user._id || req.user.id)
-      .select('department role _id')
+      .select('_id department role fullName email')
       .lean();
 
     if (!student || student.role !== 'student') {
-      return res.status(403).json({ message: 'Access denied' });
+      console.log("Student not found or not a student");
+      return res.status(403).json({ message: 'Access denied. Student login required.' });
     }
+    
+    console.log("Student found:", student._id, "Department:", student.department);
 
+    // 2. Get the exam
     const exam = await Exam.findOne({ 
       _id: req.params.id, 
       department: student.department 
     });
 
     if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
+      console.log("Exam not found");
+      return res.status(404).json({ message: 'Exam not found or not in your department' });
+    }
+    
+    console.log("Exam found:", exam._id, "Questions:", exam.questions?.length || 0);
+
+    // 3. Time validation
+    const now = new Date();
+    console.log("Current time:", now);
+    console.log("Exam start:", exam.startTime);
+    console.log("Exam end:", exam.endTime);
+    
+    if (now < exam.startTime) {
+      return res.status(403).json({ message: 'Exam has not started yet' });
+    }
+    if (now > exam.endTime) {
+      return res.status(403).json({ message: 'Exam has already ended' });
     }
 
-    const now = new Date();
-    if (now < exam.startTime) return res.status(403).json({ message: 'Exam has not started yet' });
-    if (now > exam.endTime) return res.status(403).json({ message: 'Exam has already ended' });
+    // 4. Validate answers payload
+    let { answers, terminatedBy, terminationReason } = req.body;
+    
+    console.log("Answers received:", answers?.length);
+    console.log("Terminated by:", terminatedBy);
 
-    let { answers } = req.body;
+    if (!answers) {
+      return res.status(400).json({ message: 'Answers are required' });
+    }
 
     if (!Array.isArray(answers)) {
       return res.status(400).json({ message: 'Answers must be an array' });
@@ -326,58 +363,85 @@ export const submitExam = async (req, res) => {
 
     if (answers.length !== exam.questions.length) {
       return res.status(400).json({ 
-        message: `Expected ${exam.questions.length} answers, got ${answers.length}` 
+        message: `Expected ${exam.questions.length} answers, received ${answers.length}` 
       });
     }
 
-    // Handle two possible input formats:
-    // 1. Array of numbers: [2, 1, -1, ...]  ← what your old frontend sent
-    // 2. Array of objects: [{questionId, userAnswer}, ...]  ← new correct format
-    const formattedAnswers = answers.map((item, index) => {
-      let userAnswer;
+    // 5. CRITICAL: Check if student already attempted this exam FIRST
+    const existingAttempt = await ExamAttempt.findOne({
+      examId: exam._id,
+      studentId: student._id
+    });
 
+    if (existingAttempt) {
+      console.log("Existing attempt found:", existingAttempt._id);
+      
+      // Calculate stats for existing attempt
+      let correctCount = 0;
+      let wrongCount = 0;
+      let unansweredCount = 0;
+      
+      if (existingAttempt.answers && Array.isArray(existingAttempt.answers)) {
+        existingAttempt.answers.forEach(answer => {
+          if (answer.isCorrect) correctCount++;
+          else if (answer.userAnswer === -1) unansweredCount++;
+          else if (answer.userAnswer !== undefined && answer.userAnswer !== -1) wrongCount++;
+        });
+      }
+      
+      return res.status(409).json({ 
+        message: 'You have already submitted this exam.',
+        alreadySubmitted: true,
+        score: existingAttempt.score,
+        totalMarks: existingAttempt.totalMarks,
+        percentage: existingAttempt.percentage,
+        grade: existingAttempt.grade,
+        correctCount,
+        wrongCount,
+        unansweredCount,
+        submittedAt: existingAttempt.submittedAt
+      });
+    }
+
+    // 6. Format answers properly
+    const formattedAnswers = [];
+    
+    for (let index = 0; index < answers.length; index++) {
+      const item = answers[index];
+      let userAnswer = -1;
+
+      // Handle different answer formats
       if (typeof item === 'number') {
-        // Old simple array format
         userAnswer = item;
       } else if (item && typeof item === 'object') {
-        // New object format
-        userAnswer = item.userAnswer ?? item.selectedOption ?? -1;
-      } else {
-        userAnswer = -1;
+        userAnswer = item.selectedOption ?? item.userAnswer ?? -1;
       }
 
-      // Final validation
+      // Validate answer range (0-3 for options, -1 for unanswered)
       if (userAnswer !== -1 && (userAnswer < 0 || userAnswer > 3)) {
         userAnswer = -1;
       }
 
-      return {
-        questionId: exam.questions[index]._id,
-        userAnswer: userAnswer,
-        isCorrect: false,
-        marksObtained: 0
-      };
-    });
-
-    // Now calculate score
-    let score = 0;
-    const results = formattedAnswers.map((ans, index) => {
       const question = exam.questions[index];
-      const isCorrect = ans.userAnswer === question.correctAnswer;
+      const isCorrect = userAnswer === question.correctAnswer;
       const marksObtained = isCorrect ? exam.marksPerQuestion : 0;
 
-      if (isCorrect) score += exam.marksPerQuestion;
+      formattedAnswers.push({
+        questionId: question._id,
+        userAnswer: userAnswer,
+        isCorrect: isCorrect,
+        marksObtained: marksObtained
+      });
+    }
+    
+    console.log("Formatted answers count:", formattedAnswers.length);
 
-      return {
-        ...ans,
-        isCorrect,
-        marksObtained
-      };
-    });
-
+    // 7. Calculate score
+    const score = formattedAnswers.reduce((sum, ans) => sum + ans.marksObtained, 0);
     const totalMarks = exam.questions.length * exam.marksPerQuestion;
     const percentage = parseFloat(((score / totalMarks) * 100).toFixed(2));
 
+    // Determine grade
     let grade = 'F';
     if (percentage >= 90) grade = 'A+';
     else if (percentage >= 80) grade = 'A';
@@ -385,62 +449,135 @@ export const submitExam = async (req, res) => {
     else if (percentage >= 60) grade = 'B';
     else if (percentage >= 50) grade = 'C';
     else if (percentage >= 40) grade = 'D';
+    
+    console.log(`Score: ${score}/${totalMarks} = ${percentage}% Grade: ${grade}`);
 
-    // Save attempt
-    let attempt = await ExamAttempt.findOne({
-      examId: exam._id,
-      studentId: student._id
+    // 8. Calculate counts for response
+    let correctCount = 0;
+    let wrongCount = 0;
+    let unansweredCount = 0;
+    
+    formattedAnswers.forEach(answer => {
+      if (answer.isCorrect) {
+        correctCount++;
+      } else if (answer.userAnswer === -1) {
+        unansweredCount++;
+      } else {
+        wrongCount++;
+      }
     });
 
-    if (attempt) {
-      attempt.answers = results;
-      attempt.score = score;
-      attempt.totalMarks = totalMarks;
-      attempt.percentage = percentage;
-      attempt.grade = grade;
-      attempt.status = 'completed';
-      attempt.submittedAt = new Date();
-      await attempt.save();
-    } else {
-      attempt = await ExamAttempt.create({
-        examId: exam._id,
-        studentId: student._id,
-        answers: results,
-        score,
-        totalMarks,
-        percentage,
-        grade,
-        status: 'completed',
-        submittedAt: new Date(),
-        startedAt: new Date()
-      });
-    }
+    // 9. Save new attempt
+    console.log("Saving new attempt...");
+    
+    const attemptData = {
+      examId: exam._id,
+      studentId: student._id,
+      answers: formattedAnswers,
+      score: score,
+      totalMarks: totalMarks,
+      percentage: percentage,
+      grade: grade,
+      status: 'completed',
+      submittedAt: new Date(),
+      startedAt: new Date(),
+      terminated: !!terminatedBy,
+      terminationReason: terminationReason || null
+    };
+    
+    const attempt = await ExamAttempt.create(attemptData);
+    
+    console.log("Attempt saved successfully! ID:", attempt._id);
 
+    // 10. Return success response
     res.status(200).json({
+      success: true,
       message: 'Exam submitted successfully',
       result: {
-        score,
-        totalMarks,
-        percentage,
-        grade,
+        score: score,
+        totalMarks: totalMarks,
+        percentage: percentage,
+        grade: grade,
+        correctCount: correctCount,
+        wrongCount: wrongCount,
+        unansweredCount: unansweredCount,
         submittedAt: attempt.submittedAt
       }
     });
 
   } catch (err) {
-    console.error('submitExam error:', err);
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: Object.values(err.errors).map(e => e.message).join(', ') 
+    console.error('=== SUBMIT EXAM ERROR ===');
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    console.error('Error code:', err.code);
+    console.error('Full error:', err);
+    
+    // Handle MongoDB duplicate key error (E11000)
+    if (err.code === 11000) {
+      console.log("Duplicate key error - attempting to fetch existing attempt");
+      try {
+        const existingAttempt = await ExamAttempt.findOne({
+          examId: req.params.id,
+          studentId: req.user._id || req.user.id
+        });
+        
+        if (existingAttempt) {
+          let correctCount = 0;
+          let wrongCount = 0;
+          let unansweredCount = 0;
+          
+          if (existingAttempt.answers && Array.isArray(existingAttempt.answers)) {
+            existingAttempt.answers.forEach(answer => {
+              if (answer.isCorrect) correctCount++;
+              else if (answer.userAnswer === -1) unansweredCount++;
+              else if (answer.userAnswer !== undefined && answer.userAnswer !== -1) wrongCount++;
+            });
+          }
+          
+          return res.status(409).json({
+            message: 'You have already submitted this exam.',
+            alreadySubmitted: true,
+            score: existingAttempt.score,
+            totalMarks: existingAttempt.totalMarks,
+            percentage: existingAttempt.percentage,
+            grade: existingAttempt.grade,
+            correctCount: correctCount,
+            wrongCount: wrongCount,
+            unansweredCount: unansweredCount,
+            submittedAt: existingAttempt.submittedAt
+          });
+        }
+      } catch (fetchErr) {
+        console.error("Error fetching existing attempt:", fetchErr);
+      }
+      
+      return res.status(409).json({
+        message: 'You have already submitted this exam.',
+        alreadySubmitted: true
       });
     }
-    res.status(500).json({ message: 'Server error: ' + err.message });
+
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message).join(', ');
+      console.log("Validation error:", messages);
+      return res.status(400).json({ 
+        message: messages
+      });
+    }
+
+    // Handle other errors
+    res.status(500).json({ 
+      message: 'Server error: ' + err.message
+    });
   }
 };
 // controllers/examController.js
 // =============================================================================
 // GET /api/student/exams/:id/attempt-status
 // =============================================================================
+// controllers/examController.js - Fixed getAttemptStatus
+
 export const getAttemptStatus = async (req, res) => {
   try {
     const student = await User.findById(req.user._id || req.user.id).select('_id').lean();
@@ -448,9 +585,10 @@ export const getAttemptStatus = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    // Use studentId, not student
     const attempt = await ExamAttempt.findOne({
       examId: req.params.id,
-      studentId: student._id,
+      studentId: student._id,  // ← Fixed
       status: 'completed'
     });
 
@@ -479,6 +617,8 @@ export const getAttemptStatus = async (req, res) => {
 // =============================================================================
 // GET /api/student/results
 // =============================================================================
+// controllers/examController.js - Fixed getStudentResults
+
 export const getStudentResults = async (req, res) => {
   try {
     const student = await User.findById(req.user._id || req.user.id).select('_id department role').lean();
@@ -486,8 +626,9 @@ export const getStudentResults = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Student only.' });
     }
 
+    // Use studentId, not student
     const results = await ExamAttempt.find({ 
-      studentId: student._id, 
+      studentId: student._id,  // ← Fixed: was 'student' now 'studentId'
       status: 'completed' 
     })
     .populate('examId', 'subject department startTime endTime duration marksPerQuestion')
@@ -496,7 +637,6 @@ export const getStudentResults = async (req, res) => {
 
     // Format the results for frontend
     const formattedResults = results.map(result => {
-      // Calculate correct and wrong counts
       let correctCount = 0;
       let wrongCount = 0;
       let skippedCount = 0;
@@ -511,7 +651,7 @@ export const getStudentResults = async (req, res) => {
 
       return {
         _id: result._id,
-        examId: result.examId._id,
+        examId: result.examId?._id,
         subject: result.examId?.subject || 'Unknown Subject',
         department: result.examId?.department,
         startTime: result.examId?.startTime,
@@ -525,8 +665,7 @@ export const getStudentResults = async (req, res) => {
         correctCount: correctCount,
         wrongCount: wrongCount,
         skippedCount: skippedCount,
-        submittedAt: result.submittedAt,
-        answers: result.answers // Optional: include if you want to show detailed answers
+        submittedAt: result.submittedAt
       };
     });
 
@@ -546,20 +685,20 @@ export const getStudentResults = async (req, res) => {
 // =============================================================================
 // GET /api/admin/results - Get all student results for admin's department
 // =============================================================================
+// controllers/examController.js - Fixed getAdminResults
+
 export const getAdminResults = async (req, res) => {
   try {
-    // Get admin's department
     const adminDept = await getAdminDept(req, res);
     if (!adminDept) return;
 
-    // Get all exams in admin's department
     const exams = await Exam.find({ department: adminDept })
       .select('_id subject department')
       .lean();
 
     const examIds = exams.map(exam => exam._id);
 
-    // Get all attempts for these exams and properly populate student data
+    // Use studentId, not student
     const attempts = await ExamAttempt.find({
       examId: { $in: examIds },
       status: 'completed'
@@ -569,15 +708,13 @@ export const getAdminResults = async (req, res) => {
       select: 'subject department duration marksPerQuestion startTime endTime'
     })
     .populate({
-      path: 'studentId',
-      select: 'fullName email rollNumber studentId department' // Use fullName instead of name
+      path: 'studentId',  // ← Fixed: was 'student' now 'studentId'
+      select: 'fullName email rollNumber studentId department'
     })
     .sort({ submittedAt: -1 })
     .lean();
 
-    // Format results with proper null checks
     const formattedResults = attempts.map(attempt => {
-      // Calculate statistics
       let correctCount = 0;
       let wrongCount = 0;
       let skippedCount = 0;
@@ -590,9 +727,7 @@ export const getAdminResults = async (req, res) => {
         });
       }
 
-      // Get student name from fullName field
       const studentName = attempt.studentId?.fullName || 'Unknown Student';
-      // Get roll number from rollNumber field or generate from studentId
       const rollNumber = attempt.studentId?.rollNumber || 
                         (attempt.studentId?.studentId ? `${attempt.studentId?.department || ''}${attempt.studentId?.studentId}` : 'N/A');
 
@@ -628,20 +763,12 @@ export const getAdminResults = async (req, res) => {
       };
     });
 
-    // Calculate summary statistics
     const totalStudents = new Set(formattedResults.map(r => r.student._id)).size;
     const totalExams = new Set(formattedResults.map(r => r.exam._id)).size;
     const averageScore = formattedResults.length > 0
       ? Math.round(formattedResults.reduce((sum, r) => sum + r.percentage, 0) / formattedResults.length)
       : 0;
     const passCount = formattedResults.filter(r => r.percentage >= 40).length;
-    const failCount = formattedResults.filter(r => r.percentage < 40).length;
-    const highestScore = formattedResults.length > 0 
-      ? Math.max(...formattedResults.map(r => r.percentage)) 
-      : 0;
-    const lowestScore = formattedResults.length > 0 
-      ? Math.min(...formattedResults.map(r => r.percentage)) 
-      : 0;
 
     res.status(200).json({
       success: true,
@@ -651,10 +778,10 @@ export const getAdminResults = async (req, res) => {
         totalExams,
         averageScore,
         passCount,
-        failCount,
+        failCount: formattedResults.length - passCount,
         passRate: formattedResults.length > 0 ? Math.round((passCount / formattedResults.length) * 100) : 0,
-        highestScore,
-        lowestScore
+        highestScore: formattedResults.length > 0 ? Math.max(...formattedResults.map(r => r.percentage)) : 0,
+        lowestScore: formattedResults.length > 0 ? Math.min(...formattedResults.map(r => r.percentage)) : 0
       },
       results: formattedResults
     });
@@ -663,7 +790,6 @@ export const getAdminResults = async (req, res) => {
     res.status(500).json({ message: 'Server error: ' + err.message });
   }
 };
-
 // =============================================================================
 // GET /api/admin/results/exam/:examId - Get results for specific exam
 // =============================================================================
