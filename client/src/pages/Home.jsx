@@ -5,8 +5,6 @@ import { loginSuccess } from "../store/slices/authSlice";
 import API from "../services/api";
 import { Eye, EyeOff, GraduationCap, Shield, Crown, Loader2 } from "lucide-react";
 
-const DEPARTMENTS = ['IT', 'CS', 'CE', 'ECE', 'ME', 'CIVIL', 'EC', 'EE'];
-
 const ROLES = [
   {
     key:   "student",
@@ -71,7 +69,6 @@ const Home = () => {
   const [role,    setRole]    = useState("student");
   const [email,   setEmail]   = useState("");
   const [password,setPassword]= useState("");
-  const [dept,    setDept]    = useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
@@ -79,7 +76,7 @@ const Home = () => {
 
   const switchRole = (r) => {
     setRole(r); setError("");
-    setEmail(""); setPassword(""); setDept("");
+    setEmail(""); setPassword("");
   };
 
   const handleSubmit = async (e) => {
@@ -89,12 +86,9 @@ const Home = () => {
     try {
       // ── STUDENT LOGIN ───────────────────────────────────────────────────────
       if (role === "student") {
-        if (!dept) { setError("Please select your department."); setLoading(false); return; }
-
         const res = await API.post("/auth/student/login", {
           email:      email.trim(),
           password,
-          department: dept,
         });
         const { token, user } = res.data;
 
@@ -196,12 +190,6 @@ const Home = () => {
                 <p className="text-sm text-white/80">You manage students and exams within your assigned department only.</p>
               </>
             )}
-            {role === "superadmin" && (
-              <>
-                <p className="text-xs font-bold text-white/60 uppercase tracking-wide mb-1">Super Admin Access</p>
-                <p className="text-sm text-white/80">Full system access — manage all departments, admins, and platform settings.</p>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -244,22 +232,6 @@ const Home = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* Department — student only */}
-            {role === "student" && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Department</label>
-                <select value={dept} onChange={e => setDept(e.target.value)}
-                  required disabled={loading}
-                  className={`w-full border border-gray-200 bg-gray-50 px-4 py-3 rounded-xl
-                    text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all
-                    disabled:opacity-50 ${active.ring}`}>
-                  <option value="">— Select your department —</option>
-                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-            )}
-
             {/* Email */}
             <Input label="Email Address" type="email" value={email}
               onChange={e => setEmail(e.target.value)}
