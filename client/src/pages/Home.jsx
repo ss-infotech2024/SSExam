@@ -269,7 +269,7 @@ const Home = () => {
           </form>
 
           <p className="text-center text-xs text-gray-300 mt-10">
-            SSInfotech · Online Exam Portal · {new Date().getFullYear()}
+              · Online Exam Portal · {new Date().getFullYear()}
           </p>
         </div>
       </div>
