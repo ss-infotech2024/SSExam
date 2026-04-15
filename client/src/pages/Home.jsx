@@ -156,7 +156,7 @@ const Home = () => {
             mx-auto mb-6 backdrop-blur-sm shadow-xl">
             <active.icon className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-black mb-3">Online Exam Portal</h2>
+          <h2 className="text-3xl font-black mb-3">SAR ONLINE EXAM PORTAL</h2>
           <p className="text-white/70 text-sm leading-relaxed mb-8">
             A secure, proctored examination platform for students and educators.
           </p>
@@ -204,7 +204,7 @@ const Home = () => {
               flex items-center justify-center mx-auto mb-3 shadow-lg`}>
               <active.icon className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-xl font-black text-gray-900">Online Exam Portal</h1>
+            <h1 className="text-xl font-black text-gray-900">SAR ONLINE EXAM PORTAL</h1>
           </div>
 
           <h1 className="text-2xl font-black text-gray-900 mb-1">Welcome back</h1>
@@ -269,7 +269,7 @@ const Home = () => {
           </form>
 
           <p className="text-center text-xs text-gray-300 mt-10">
-              · Online Exam Portal · {new Date().getFullYear()}
+              · SAR ONLINE EXAM PORTAL · {new Date().getFullYear()}
           </p>
         </div>
       </div>
