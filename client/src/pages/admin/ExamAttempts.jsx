@@ -241,7 +241,7 @@ const ExamAttempts = () => {
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Percentage</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Performance</th>
+                        {/* <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Performance</th> */}
                       </>
                     )}
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -277,11 +277,11 @@ const ExamAttempts = () => {
                             </span>
                           </td>
                           <td className="px-6 py-5 font-bold">{student.grade}</td>
-                          <td className="px-6 py-5 text-xs">
+                          {/* <td className="px-6 py-5 text-xs">
                             <div>{student.correctCount} correct</div>
                             <div className="text-red-600">{student.wrongCount} wrong</div>
                             <div className="text-gray-500">{student.skippedCount} skipped</div>
-                          </td>
+                          </td> */}
                         </>
                       )}
 
