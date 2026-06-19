@@ -78,10 +78,9 @@ const Toast = ({ message, type, onClose }) => (
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DEPT_STYLE = {
-  IT:  { bg: "bg-purple-600", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", ring: "focus:ring-purple-500" },
-  CS:  { bg: "bg-blue-600",   light: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200",   ring: "focus:ring-blue-500"   },
-  CE:  { bg: "bg-green-600",  light: "bg-green-50",  text: "text-green-700",  border: "border-green-200",  ring: "focus:ring-green-500"  },
-  ECE: { bg: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", ring: "focus:ring-yellow-500" },
+  DB :  { bg: "bg-purple-600", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", ring: "focus:ring-purple-500" },
+  SN :  { bg: "bg-blue-600",   light: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200",   ring: "focus:ring-blue-500"   },
+  
 };
 
 const makeQuestion = () => ({
