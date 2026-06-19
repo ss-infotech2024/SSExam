@@ -62,6 +62,36 @@ export const isoToLocalInput = (isoString) => {
   );
 };
 
+// ─── Draft Persistence Helpers ────────────────────────────────────────────────
+// ✅ NEW: Save/restore the in-progress exam so a reload doesn't wipe it out
+const DRAFT_KEY = "createExamDraft";
+
+const loadDraft = () => {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const saveDraft = (data) => {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch {
+    // localStorage full or unavailable — fail silently, not critical
+  }
+};
+
+const clearDraft = () => {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+};
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, type, onClose }) => (
   <div
@@ -96,6 +126,9 @@ const CreateExam = () => {
   const dispatch = useDispatch();
   const { actionLoading, actionError } = useSelector((s) => s.exams);
 
+  // ✅ NEW: Load any saved draft on first render (lazy init avoids extra renders)
+  const draft = loadDraft();
+
   React.useEffect(() => {
     const role  = localStorage.getItem("userRole");
     const dept  = localStorage.getItem("adminDepartment");
@@ -106,11 +139,18 @@ const CreateExam = () => {
 
   const adminDept = localStorage.getItem("adminDepartment") || "";
 
-  const [step,      setStep]      = useState(1);
-  const [examData,  setExamData]  = useState(EMPTY_EXAM);
-  const [questions, setQuestions] = useState([]);
+  const [step,      setStep]      = useState(draft?.step ?? 1);
+  const [examData,  setExamData]  = useState(draft?.examData ?? EMPTY_EXAM);
+  const [questions, setQuestions] = useState(draft?.questions ?? []);
   const [errors,    setErrors]    = useState({});
   const [toast,     setToast]     = useState(null);
+
+  // ✅ NEW: Let the admin know a draft was restored
+  React.useEffect(() => {
+    if (draft && (draft.questions?.length > 0 || draft.examData?.subject)) {
+      showToast("Restored your unsaved exam draft.", "success");
+    }
+  }, []); // eslint-disable-line
 
   const questionRefs = useRef([]);
 
@@ -122,6 +162,11 @@ const CreateExam = () => {
   React.useEffect(() => {
     if (actionError) showToast(actionError, "error");
   }, [actionError, showToast]);
+
+  // ✅ NEW: Persist to localStorage whenever step, examData, or questions change
+  React.useEffect(() => {
+    saveDraft({ step, examData, questions });
+  }, [step, examData, questions]);
 
   // ── Step 1 handlers ────────────────────────────────────────────────────────
   const handleInfoChange = (e) => {
@@ -225,10 +270,23 @@ const CreateExam = () => {
       setQuestions([]);
       setStep(1);
       setErrors({});
+      clearDraft(); // ✅ NEW: Only clear the saved draft after a successful save
     }
   };
 
+  // ✅ NEW: Let the admin manually wipe the draft and start fresh
+  const handleDiscardDraft = () => {
+    if (!window.confirm("Discard this exam draft? This cannot be undone.")) return;
+    setExamData(EMPTY_EXAM);
+    setQuestions([]);
+    setStep(1);
+    setErrors({});
+    clearDraft();
+    showToast("Draft discarded.", "success");
+  };
+
   const totalMarks = questions.length * (Number(examData.marksPerQuestion) || 0);
+  const hasDraftContent = examData.subject || questions.length > 0;
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
@@ -256,6 +314,16 @@ const CreateExam = () => {
                 <span className="bg-indigo-700 border border-indigo-500 text-indigo-100 text-xs font-bold px-3 py-1.5 rounded-lg">
                   Total: {totalMarks} marks
                 </span>
+              )}
+              {/* ✅ NEW: Discard draft button — only shows when there's saved content */}
+              {hasDraftContent && (
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-xs text-indigo-200 hover:text-white underline"
+                >
+                  Discard draft
+                </button>
               )}
             </div>
           </div>
