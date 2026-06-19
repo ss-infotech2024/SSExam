@@ -25,7 +25,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [settings, setSettings] = useState({
     general: {
-      systemName: "SAR ONLINE EXAM PORTAL",
+      systemName: "SS Exam Portal",
       supportEmail: "support@examportal.com",
       timezone: "Asia/Kolkata",
       dateFormat: "DD/MM/YYYY",
