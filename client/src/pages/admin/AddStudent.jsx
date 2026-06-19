@@ -74,13 +74,11 @@ const api = {
 };
 
 // ─── CONSTANTS — must match schema enum exactly ───────────────────────────────
-const DEPARTMENTS = ["IT", "CS", "CE", "ECE"];
+const DEPARTMENTS = ['Data Bricks', 'Service Now'];
 
 const DEPT_LABELS = {
-  IT:  "Information Technology",
-  CS:  "Computer Science",
-  CE:  "Civil Engineering",
-  ECE: "Electronics & Communication",
+  DB :"Data Bricks",
+ SN : "Service Now"
 };
 
 // department is NOT in the form — it is locked to admin's own dept
@@ -89,10 +87,8 @@ const EMPTY_FORM = { fullName: "", email: "", password: "", studentId: "" };
 // ─── DEPARTMENT STYLE MAP ─────────────────────────────────────────────────────
 const getDeptStyle = (dept = "") => {
   const map = {
-    IT:  { icon: "🌐", lightBg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", bg: "bg-purple-600", hoverBg: "hover:bg-purple-700", ring: "ring-purple-500" },
-    CS:  { icon: "💻", lightBg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   bg: "bg-blue-600",   hoverBg: "hover:bg-blue-700",   ring: "ring-blue-500"   },
-    CE:  { icon: "🏗️", lightBg: "bg-green-50",  border: "border-green-200",  text: "text-green-700",  bg: "bg-green-600",  hoverBg: "hover:bg-green-700",  ring: "ring-green-500"  },
-    ECE: { icon: "⚡", lightBg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", bg: "bg-yellow-600", hoverBg: "hover:bg-yellow-700", ring: "ring-yellow-500" },
+    DB:  { icon: "🌐", lightBg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", bg: "bg-purple-600", hoverBg: "hover:bg-purple-700", ring: "ring-purple-500" },
+    SN:  { icon: "💻", lightBg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   bg: "bg-blue-600",   hoverBg: "hover:bg-blue-700",   ring: "ring-blue-500"   },
   };
   return map[dept] || {
     icon: "📚", lightBg: "bg-gray-50", border: "border-gray-200",
@@ -281,7 +277,7 @@ const AddStudent = () => {
           "Missing required columns. Your Excel must have:",
           "• Name  (or Full Name / Student Name)",
           "• Email",
-          "Optional: Password, Department (IT / CS / CE / ECE)",
+          "Optional: Password, Department (DB,SN)",
           "Student ID is auto-assigned — no column needed.",
         ]);
         return;
@@ -430,7 +426,7 @@ const AddStudent = () => {
               Student IDs are auto-assigned starting from 101 per department
             </p>
             <p className="text-gray-500 mt-0.5">
-              Departments: <strong>IT</strong>, <strong>CS</strong>, <strong>CE</strong>, <strong>ECE</strong>.
+              Departments: <strong>DB</strong>, <strong>SN</strong>.
               Bulk Excel only needs <strong>Name</strong> and <strong>Email</strong> — no ID column required.
             </p>
           </div>
@@ -446,7 +442,7 @@ const AddStudent = () => {
               <h2 className="text-base font-bold text-gray-900">Bulk Add via Excel</h2>
               <p className="text-xs text-gray-500">
                 Required: <strong>Name</strong>, <strong>Email</strong> ·
-                Optional: Password, Department (IT / CS / CE / ECE) ·
+                Optional: Password, Department (DB, SN) ·
                 <em> No ID column needed</em>
               </p>
             </div>

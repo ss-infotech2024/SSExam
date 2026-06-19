@@ -65,10 +65,9 @@ const STATUS = {
 };
 
 const DEPT_STYLE = {
-  IT:  { bg: "bg-purple-600", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
-  CS:  { bg: "bg-blue-600",   light: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200"   },
-  CE:  { bg: "bg-green-600",  light: "bg-green-50",  text: "text-green-700",  border: "border-green-200"  },
-  ECE: { bg: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+  DB:  { bg: "bg-purple-600", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
+  SN:  { bg: "bg-blue-600",   light: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200"   },
+
 };
 
 // ─── Delete Modal ─────────────────────────────────────────────────────────────
@@ -118,7 +117,7 @@ const ExamList = () => {
   }, []); // eslint-disable-line
 
   const adminDept = localStorage.getItem("adminDepartment") || "";
-  const ds        = DEPT_STYLE[adminDept] || DEPT_STYLE["CS"];
+  const ds        = DEPT_STYLE[adminDept] || DEPT_STYLE["DB"];
 
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

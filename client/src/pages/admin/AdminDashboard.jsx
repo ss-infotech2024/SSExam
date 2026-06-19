@@ -35,7 +35,7 @@ api.interceptors.response.use(
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [adminDepartment, setAdminDepartment] = useState("CS");
+  const [adminDepartment, setAdminDepartment] = useState("DB");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [stats, setStats] = useState({
@@ -50,7 +50,7 @@ const AdminDashboard = () => {
   const [recentResults, setRecentResults] = useState([]);
 
   useEffect(() => {
-    const dept = localStorage.getItem("adminDepartment") || "CS";
+    const dept = localStorage.getItem("adminDepartment") || "DB";
     setAdminDepartment(dept);
     fetchDashboardData();
   }, []);

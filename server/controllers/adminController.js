@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/user.models.js';
 
 // ─── SCHEMA CONSTANTS (must match user model enum exactly) ───────────────────
-const DEPARTMENTS = ['IT', 'CS', 'CE', 'ECE'];
+const DEPARTMENTS = ['Data Bricks', 'Service Now'];
 
 // ─── HELPER: single error message from express-validator ─────────────────────
 const firstError = (req, res) => {

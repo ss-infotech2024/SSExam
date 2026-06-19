@@ -64,14 +64,12 @@ const api = {
 };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const DEPARTMENTS = ["IT", "CS", "CE", "ECE"];
-const DEPT_LABELS = {
-  IT: "Information Technology",
-  CS: "Computer Science",
-  CE: "Civil Engineering",
-  ECE: "Electronics & Communication",
-};
+const DEPARTMENTS = ['Data Bricks', 'Service Now'];
 
+const DEPT_LABELS = {
+  DB :"Data Bricks",
+ SN : "Service Now"
+};
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, type, onClose }) => (
   <div

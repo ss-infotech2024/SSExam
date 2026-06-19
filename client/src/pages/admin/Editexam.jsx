@@ -107,7 +107,7 @@ const EditExam = () => {
   }, []); // eslint-disable-line
 
   const adminDept = localStorage.getItem("adminDepartment") || "";
-  const ds        = DEPT_STYLE[adminDept] || DEPT_STYLE["CS"];
+  const ds        = DEPT_STYLE[adminDept] || DEPT_STYLE["DB"];
 
   const [examData,         setExamData]         = useState({ subject: "", duration: "", startTime: "", endTime: "" });
   const [marksPerQuestion, setMarksPerQuestion] = useState(null); // read-only after fetch
