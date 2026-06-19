@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://ssexxamportal.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ssexam-backend.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_URL,

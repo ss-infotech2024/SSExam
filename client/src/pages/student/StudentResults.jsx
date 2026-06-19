@@ -9,7 +9,7 @@ import { StudentLayout } from "../../components/student/StudentLayout";
 
 // ─── Axios Instance (Same as StudentDashboard.jsx) ─────────────────────────────
 const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_URL || "https://ssexxamportal.onrender.com/api" 
+  baseURL: import.meta.env.VITE_API_URL || "https://ssexam-backend.onrender.com/api" 
 });
 
 api.interceptors.request.use(cfg => {

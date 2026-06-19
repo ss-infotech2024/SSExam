@@ -47,7 +47,7 @@ const formatISTFull = (isoString) => {
 
 // ─── Axios ─────────────────────────────────────────────────────────────────────
 const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_URL || "https://ssexxamportal.onrender.com/api" 
+  baseURL: import.meta.env.VITE_API_URL || "https://ssexam-backend.onrender.com/api" 
 });
 
 api.interceptors.request.use(cfg => {

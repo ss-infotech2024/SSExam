@@ -9,7 +9,7 @@ import { FiRefreshCw, FiAlertCircle } from "react-icons/fi";
 
 // ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://ssexxamportal.onrender.com/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://ssexam-backend.onrender.com/api",
 });
 
 axiosInstance.interceptors.request.use((config) => {
