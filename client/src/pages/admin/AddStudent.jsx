@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 
 // ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://onlineexamportal-uvvx.onrender.com/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
 });
 
 axiosInstance.interceptors.request.use((config) => {

@@ -9,7 +9,7 @@ import {
 } from "react-icons/fi";
 
 const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_URL || "https://onlineexamportal-uvvx.onrender.com/api" 
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api" 
 });
 
 api.interceptors.request.use(cfg => {

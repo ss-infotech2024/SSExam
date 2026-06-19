@@ -7,7 +7,7 @@ import {
   Camera, CameraOff, Trophy
 } from "lucide-react";
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "https://onlineexamportal-uvvx.onrender.com/api" });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api" });
 api.interceptors.request.use(cfg => {
   const t = localStorage.getItem("token");
   if (t) cfg.headers.Authorization = `Bearer ${t}`;

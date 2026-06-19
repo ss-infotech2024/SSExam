@@ -18,6 +18,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // local dev
+      "http://localhost:5174",
       "https://tgpexamportal.netlify.app" // deployed frontend
     ],
     credentials: true,

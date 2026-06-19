@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
 
   department: {
     type: String,
-    enum: ['IT', 'CS', 'CE', 'ECE', 'ME', 'CIVIL', 'EC', 'EE', null],
+    enum: ['Data Bricks', 'Service Now', null],
     required: function () { return this.role !== 'superadmin'; },
     default: null,
   },
