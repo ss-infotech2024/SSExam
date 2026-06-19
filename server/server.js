@@ -19,7 +19,8 @@ app.use(
     origin: [
       "http://localhost:5173", // local dev
       "http://localhost:5174",
-      "https://ss-exam-portal.netlify.app" // deployed frontend
+      "https://ss-exam-portal.netlify.app",
+      "https://exam.ssinfotech.co.in"
     ],
     credentials: true,
   })
