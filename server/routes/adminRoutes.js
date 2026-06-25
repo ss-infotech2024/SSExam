@@ -1,6 +1,8 @@
 // routes/adminRoutes.js
 // Mount: app.use('/api/admin', adminRoutes)
+
 import express from 'express';
+import multer from 'multer';                          // npm install multer
 import {
   getStudents,
   createStudent,
@@ -8,6 +10,7 @@ import {
   updateStudent,
   deleteStudent,
   changeStudentPassword,
+  downloadAllStudentsExcel,
 } from '../controllers/adminController.js';
 import {
   getExams,
@@ -19,10 +22,14 @@ import {
   getExamResults,
   getStudentResultsByAdmin,
   exportExamResults,
-  getExamAttendees,        // Add this
+  getExamAttendees,
   exportExamAttendees,
-  resetExamAttempt
+  resetExamAttempt,
 } from '../controllers/examController.js';
+import {
+  downloadExamTemplate,
+  uploadAndCreateExam,
+} from '../controllers/examController.js';      // ← your Excel controller
 import {
   getExamAttempts,
   rescheduleAttempt,
@@ -31,36 +38,72 @@ import { protect, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// ── Multer — memory storage, .xlsx only, 5 MB cap ────────────────────────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok =
+      file.mimetype ===
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.originalname.toLowerCase().endsWith('.xlsx');
+    ok
+      ? cb(null, true)
+      : cb(new Error('Only .xlsx files are accepted.'), false);
+  },
+});
+
+// ── Multer error handler (catches file-type / size rejections) ───────────────
+const handleUpload = (req, res, next) => {
+  upload.single('examFile')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ message: `Upload error: ${err.message}` });
+    }
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+};
+
 router.use(protect, adminOnly);
 
 // ── Students ──────────────────────────────────────────────────────────────────
 router.get   ('/students',              getStudents);
 router.post  ('/create-student',        createStudent);
 router.post  ('/students/bulk',         bulkAddStudents);
+router.get   ('/students/download-all',         downloadAllStudentsExcel);
 router.put   ('/students/:id',          updateStudent);
 router.delete('/students/:id',          deleteStudent);
 router.patch ('/students/:id/password', changeStudentPassword);
 
-// ── Exams ─────────────────────────────────────────────────────────────────────
+// ── Excel Template & Upload ───────────────────────────────────────────────────
+// IMPORTANT: these two routes must come BEFORE /exams/:id
+// so Express doesn't treat "template" or "upload" as an :id value
+router.get ('/exams/template/download',    downloadExamTemplate);
+router.post('/exams/upload', handleUpload, uploadAndCreateExam);
+
+// ── Exams (CRUD) ──────────────────────────────────────────────────────────────
 router.get   ('/exams',     getExams);
 router.post  ('/exams',     createExam);
 router.get   ('/exams/:id', getExamById);
 router.put   ('/exams/:id', updateExam);
 router.delete('/exams/:id', deleteExam);
-// Results management routes
-router.get('/results', getAdminResults);
-router.get('/results/exam/:examId', getExamResults);
+
+// ── Results ───────────────────────────────────────────────────────────────────
+router.get('/results',                    getAdminResults);
+router.get('/results/exam/:examId',       getExamResults);
 router.get('/results/student/:studentId', getStudentResultsByAdmin);
-router.get('/results/export/:examId', exportExamResults);
-// NEW: Exam attendees routes
-router.get('/exams/:examId/attendees', getExamAttendees);
-router.get('/exams/:examId/attendees/export', exportExamAttendees);
-// Inside your admin-protected router
+router.get('/results/export/:examId',     exportExamResults);
+
+// ── Attendees ─────────────────────────────────────────────────────────────────
+router.get   ('/exams/:examId/attendees',        getExamAttendees);
+router.get   ('/exams/:examId/attendees/export', exportExamAttendees);
+
+// ── Reset attempt ─────────────────────────────────────────────────────────────
 router.delete('/exams/:examId/attempts/:studentId/reschedule', resetExamAttempt);
-// ── Exam Attempts (admin view + reschedule) ───────────────────────────────────
-// IMPORTANT: /exams/:id/attempts must come AFTER /exams/:id
-// GET    /api/admin/exams/:id/attempts                              — view all student attempts
-// DELETE /api/admin/exams/:examId/attempts/:studentId/reschedule   — reset student attempt
+
+// ── Exam Attempts (admin view) ────────────────────────────────────────────────
 router.get   ('/exams/:id/attempts',                           getExamAttempts);
 router.delete('/exams/:examId/attempts/:studentId/reschedule', rescheduleAttempt);
 

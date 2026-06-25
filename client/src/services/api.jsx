@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance
 const API = axios.create({
-  baseURL: "https://ssexam-backend.onrender.com/api", // 🔹 Change when deployed
+  baseURL: "https://exam.ssinfotech.co.in/api", // 🔹 Change when deployed
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
