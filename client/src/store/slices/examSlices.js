@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import API from "../../services/api";
 import axios from "axios";
-const BASE_URL = import.meta.env.VITE_API_URL || "https://tgpexambackend.onrender.com/api";
+const BASE_URL = import.meta.env.VITE_API_URL || " https://ssexam.onrender.com/api";
 // ─── Async Thunks ─────────────────────────────────────────────────────────────
 
 // Admin — fetch all exams in their department
