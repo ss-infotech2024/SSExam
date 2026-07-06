@@ -61,8 +61,8 @@ export const createAdmin = [
   body('department')
     .notEmpty()
     .withMessage('Department is required')
-    .isIn(['Data Bricks', 'Service Now'])
-    .withMessage(`Department must be one of: IT, CS, CE, ECE`),
+    .isIn(['Data Bricks', 'Service Now', 'MCA'])
+    .withMessage(`Department must be one of: Data Bricks, Service Now, MCA`),
 
   async (req, res) => {
     if (!validate(req, res)) return;
@@ -145,8 +145,8 @@ export const updateAdmin = [
 
   body('department')
     .optional()
-    .isIn(['Data Bricks', 'Service Now'])
-    .withMessage(`Department must be one of: 'Data Bricks', 'Service Now'`),
+    .isIn(['Data Bricks', 'Service Now', 'MCA'])
+    .withMessage(`Department must be one of: 'Data Bricks', 'Service Now', 'MCA`),
 
   async (req, res) => {
     if (!validate(req, res)) return;

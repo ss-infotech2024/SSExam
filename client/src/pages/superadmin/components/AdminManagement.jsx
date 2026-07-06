@@ -12,7 +12,7 @@ import {
   CheckCircle, XCircle, RefreshCw, X, AlertCircle, Loader2,
 } from "lucide-react";
 
-const DEPARTMENTS = ['Data Bricks', 'Service Now'];
+const DEPARTMENTS = ['Data Bricks', 'Service Now', 'MCA'];
 
 // ─── Toast ─────────────────────────────────────────────────────────────────────
 const Toast = ({ msg, type, onClose }) => {

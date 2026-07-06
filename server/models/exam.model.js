@@ -28,7 +28,7 @@ const examSchema = new mongoose.Schema({
   },
   department: {
     type:     String,
-    enum:     ['Data Bricks', 'Service Now'],
+    enum:     ['Data Bricks', 'Service Now', 'MCA'],
     required: true,
   },
   createdBy: {
