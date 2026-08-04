@@ -893,3 +893,25 @@ export const changeStudentPassword = [
     }
   },
 ];
+
+export const bulkChangeStudentPassword = [
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  async (req, res) => {
+    if (!firstError(req, res)) return;
+    try {
+      const adminDept = await getAdminDept(req, res);
+      if (!adminDept) return;
+      const { newPassword } = req.body;
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      const escapedDept = adminDept.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const result = await User.updateMany(
+        { role: 'student', department: { $regex: `^${escapedDept}$`, $options: 'i' } },
+        { $set: { password: hashedPassword, plainPassword: newPassword } }
+      );
+      res.status(200).json({ message: `Password updated for ${result.modifiedCount} student(s)`, modifiedCount: result.modifiedCount });
+    } catch (err) {
+      console.error('bulkChangeStudentPassword:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+];

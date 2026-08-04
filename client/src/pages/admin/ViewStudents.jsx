@@ -61,6 +61,12 @@ const api = {
     axiosInstance
       .patch(`/admin/students/${id}/password`, { newPassword })
       .then((r) => r.data),
+
+  // PATCH /api/admin/students/bulk-password
+  bulkChangePassword: (newPassword) =>
+    axiosInstance
+      .patch("/admin/students/bulk-password", { newPassword })
+      .then((r) => r.data),
 };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -387,6 +393,166 @@ const DeleteModal = ({ student, onClose, onDeleted }) => {
   );
 };
 
+
+const BulkPasswordModal = ({ studentCount, onClose, onSuccess }) => {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const generateRandomPassword = () => {
+    const chars =
+      "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$";
+    let pwd = "";
+
+    for (let i = 0; i < 10; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    setPassword(pwd);
+  };
+
+  const handleSubmit = async () => {
+    if (!password.trim()) {
+      showToast("Enter password first", "error");
+      return;
+    }
+
+    if (password.length < 6) {
+      showToast("Password must be at least 6 characters", "error");
+      return;
+    }
+
+    if (!confirm) {
+      setConfirm(true);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await api.bulkChangePassword(password);
+
+      showToast(
+        res.message || "Passwords updated successfully.",
+        "success"
+      );
+
+      onSuccess?.();
+
+    } catch (err) {
+      showToast(
+        err?.response?.data?.message || "Unable to update passwords",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Change Password for All Students"
+      onClose={onClose}
+    >
+      {!confirm ? (
+        <>
+          <div className="space-y-4">
+
+            <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm">
+              <strong>Warning</strong>
+              <br />
+              This will change the password for all{" "}
+              <b>{studentCount}</b> students.
+            </div>
+
+            <input
+              type="text"
+              placeholder="Enter new password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+
+            <button
+              type="button"
+              onClick={generateRandomPassword}
+              className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+            >
+              Generate Random Password
+            </button>
+
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 rounded-lg bg-purple-600 text-white"
+            >
+              Continue
+            </button>
+
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+
+            <h3 className="font-semibold text-red-700">
+              Final Confirmation
+            </h3>
+
+            <p className="mt-2 text-sm">
+              This will update the password of all{" "}
+              <strong>{studentCount}</strong> students.
+            </p>
+
+            <p className="mt-2">
+              New Password:
+            </p>
+
+            <div className="font-mono bg-white border rounded p-2 mt-1">
+              {password}
+            </div>
+
+            <p className="mt-3 text-red-600 text-sm">
+              This action cannot be undone.
+            </p>
+
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+
+            <button
+              onClick={() => setConfirm(false)}
+              className="px-4 py-2 border rounded-lg"
+            >
+              Back
+            </button>
+
+            <button
+              disabled={loading}
+              onClick={handleSubmit}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50"
+            >
+              {loading
+                ? "Updating..."
+                : `Yes, Update All ${studentCount}`}
+            </button>
+
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+};
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════════════════════
@@ -495,14 +661,22 @@ const ViewStudents = () => {
               </strong>
             </p>
           </div>
-          <button
-            onClick={loadStudents}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300
-              rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition"
-          >
-            <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setModal("bulk-password")}
+              className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+            >
+              Change Password for All Students ({filtered.length})
+            </button>
+
+            <button
+              onClick={loadStudents}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition"
+            >
+              <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Stat Cards */}
@@ -716,6 +890,16 @@ const ViewStudents = () => {
           student={selectedStudent}
           onClose={closeModal}
           onDeleted={handleDeleted}
+        />
+      )}
+      {modal === "bulk-password" && (
+        <BulkPasswordModal
+          studentCount={filtered.length}
+          onClose={closeModal}
+          onSuccess={() => {
+            closeModal();
+            loadStudents();
+          }}
         />
       )}
     </div>

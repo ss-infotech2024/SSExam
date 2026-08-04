@@ -10,6 +10,7 @@ import {
   updateStudent,
   deleteStudent,
   changeStudentPassword,
+  bulkChangeStudentPassword,
   downloadAllStudentsExcel,
 } from '../controllers/adminController.js';
 import {
@@ -76,6 +77,7 @@ router.get   ('/students/download-all',         downloadAllStudentsExcel);
 router.put   ('/students/:id',          updateStudent);
 router.delete('/students/:id',          deleteStudent);
 router.patch ('/students/:id/password', changeStudentPassword);
+router.patch ('/students/bulk-password', bulkChangeStudentPassword);   // ← NEW
 
 // ── Excel Template & Upload ───────────────────────────────────────────────────
 // IMPORTANT: these two routes must come BEFORE /exams/:id
