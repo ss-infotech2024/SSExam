@@ -21,7 +21,7 @@ app.use(
       "http://localhost:5174",
       "http://localhost:5175",
       "https://ss-exam-portal.netlify.app",
-      " https://ssexam.onrender.com",
+      "http://localhost:5000",
       "https://exam.ssinfotech.co.in"
     ],
     credentials: true,

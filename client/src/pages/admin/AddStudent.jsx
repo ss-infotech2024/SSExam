@@ -11,8 +11,8 @@ import * as XLSX from "xlsx";
 
 // ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
 const axiosInstance = axios.create({
-  // baseURL: import.meta.env.VITE_API_URL || "https://ssexam.onrender.com/api" || "http://localhost:5000/api",
-  baseURL: import.meta.env.VITE_API_URL || "https://ssexam.onrender.com/api",
+  // baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api" || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
 
 });
 
