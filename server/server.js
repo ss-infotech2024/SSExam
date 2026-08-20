@@ -13,16 +13,19 @@ import examAttemptroutes from './routes/examattemptroutes.js';
 dotenv.config();
 const app = express();
 
-// ✅ CORS FIX (IMPORTANT)
 app.use(
   cors({
     origin: [
-      "http://localhost:5173", // local dev
+      "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5175",
+
+      // Production Frontend
+      "https://ss-exam-psi.vercel.app",
+
+      // Old / other production frontends
       "https://ss-exam-portal.netlify.app",
-      "https://ssexam.onrender.com",
-      "https://exam.ssinfotech.co.in"
+      "https://exam.ssinfotech.co.in",
     ],
     credentials: true,
   })
