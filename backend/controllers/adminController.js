@@ -533,92 +533,214 @@ const shapeStudent = (s) => ({
 
 // ─── GET STUDENTS ─────────────────────────────────────────────────────────────
 // GET /api/admin/students?status=active&search=john&page=1&limit=20
+// ─── GET STUDENTS ─────────────────────────────────────────────────────────────
+// GET /api/admin/students
+//
+// If page/limit are NOT provided:
+// → return ALL students from admin's department
+//
+// If page/limit ARE provided:
+// → pagination will still work
+
 export const getStudents = [
-  query('status').optional().isIn(['active', 'inactive']).withMessage('Invalid status'),
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be 1–100'),
+  query('status')
+    .optional()
+    .isIn(['active', 'inactive'])
+    .withMessage('Invalid status'),
+
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Limit must be 1–1000'),
 
   async (req, res) => {
     if (!firstError(req, res)) return;
 
     try {
-      const { status, search, page = 1, limit = 50 } = req.query;
+      const {
+        status,
+        search,
+        page,
+        limit,
+      } = req.query;
 
-      // ── Resolve which department to query ────────────────────────────────────
-      // Priority:
-      //   1. ?department=CS  query param  (explicit override, useful in Postman / superadmin)
-      //   2. admin's own department from DB  (normal case)
-      //
-      // We always re-fetch the admin from DB so we are never relying on stale JWT data.
-      const adminUser = await User.findById(req.user._id || req.user.id).lean();
+      // ─────────────────────────────────────────────────────────────
+      // Get admin from database
+      // ─────────────────────────────────────────────────────────────
+      const adminUser = await User.findById(
+        req.user._id || req.user.id
+      ).lean();
 
       if (!adminUser) {
-        return res.status(401).json({ message: 'Admin account not found' });
-      }
-
-      // Accept ?department=XX override — fall back to admin's stored department
-      const adminDept   = adminUser.department;
-      const queryDept   = req.query.department?.trim() || null;
-      const targetDept  = queryDept || adminDept;
-
-      if (!targetDept) {
-        return res.status(400).json({
-          message: 'No department found — pass ?department=XX or ensure your admin account has a department set',
-          _debug:  { adminDept, queryDept },
+        return res.status(401).json({
+          message: 'Admin account not found',
         });
       }
 
-      // ── Build the query filter ───────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────
+      // Department
+      // ─────────────────────────────────────────────────────────────
+      const adminDept = adminUser.department;
+
+      const queryDept =
+        req.query.department?.trim() || null;
+
+      const targetDept =
+        queryDept || adminDept;
+
+      if (!targetDept) {
+        return res.status(400).json({
+          message:
+            'No department found — pass ?department=XX or ensure your admin account has a department set',
+
+          _debug: {
+            adminDept,
+            queryDept,
+          },
+        });
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // Build student filter
+      // ─────────────────────────────────────────────────────────────
       const filter = {
-        role:       'student',
-        department: { $regex: new RegExp(`^${targetDept}$`, 'i') },
+        role: 'student',
+        department: {
+          $regex: new RegExp(`^${targetDept}$`, 'i'),
+        },
       };
 
-      if (status) filter.status = status;
+      // Status filter
+      if (status) {
+        filter.status = status;
+      }
 
+      // Search filter
       if (search?.trim()) {
         const q = search.trim();
+
         filter.$or = [
-          { fullName: { $regex: q, $options: 'i' } },
-          { email:    { $regex: q, $options: 'i' } },
-          ...(isNaN(q) ? [] : [{ studentId: parseInt(q, 10) }]),
+          {
+            fullName: {
+              $regex: q,
+              $options: 'i',
+            },
+          },
+          {
+            email: {
+              $regex: q,
+              $options: 'i',
+            },
+          },
+          ...(isNaN(q)
+            ? []
+            : [
+                {
+                  studentId: parseInt(q, 10),
+                },
+              ]),
         ];
       }
 
-      const pageNum  = parseInt(page,  10);
-      const limitNum = parseInt(limit, 10);
+      // ─────────────────────────────────────────────────────────────
+      // Count ALL matching students
+      // ─────────────────────────────────────────────────────────────
+      const total = await User.countDocuments(filter);
 
-      // ── Debug log — remove once confirmed working ────────────────────────────
-      console.log('[getStudents] admin:', adminUser.email, '| adminDept:', adminDept, '| targetDept:', targetDept);
+      // ─────────────────────────────────────────────────────────────
+      // Build query
+      // ─────────────────────────────────────────────────────────────
+      let studentsQuery = User.find(filter)
+        .select('-password')
+        .sort({ studentId: 1 });
 
-      const [students, total] = await Promise.all([
-        User.find(filter)
-          .select('-password')
-          .sort({ studentId: 1 })
+      // ─────────────────────────────────────────────────────────────
+      // IMPORTANT:
+      // Only apply pagination if page OR limit was explicitly sent.
+      //
+      // Frontend currently sends only:
+      // ?department=Data Bricks
+      //
+      // Therefore ALL students will be returned.
+      // ─────────────────────────────────────────────────────────────
+      const usePagination =
+        page !== undefined || limit !== undefined;
+
+      let pageNum = null;
+      let limitNum = null;
+      let totalPages = 1;
+
+      if (usePagination) {
+        pageNum = parseInt(page || '1', 10);
+        limitNum = parseInt(limit || '50', 10);
+
+        studentsQuery = studentsQuery
           .skip((pageNum - 1) * limitNum)
-          .limit(limitNum)
-          .lean(),
-        User.countDocuments(filter),
-      ]);
+          .limit(limitNum);
 
-      // ── Debug log — remove once confirmed working ────────────────────────────
-      console.log('[getStudents] found:', total, 'students');
+        totalPages = Math.ceil(total / limitNum);
+      }
 
-      res.status(200).json({
-        students:   students.map(shapeStudent),
+      // ─────────────────────────────────────────────────────────────
+      // Fetch students
+      // ─────────────────────────────────────────────────────────────
+      const students = await studentsQuery.lean();
+
+      console.log(
+        '[getStudents]',
+        'admin:',
+        adminUser.email,
+        '| department:',
+        targetDept,
+        '| found:',
+        students.length,
+        '| total:',
+        total,
+        '| pagination:',
+        usePagination
+      );
+
+      // ─────────────────────────────────────────────────────────────
+      // Response
+      // ─────────────────────────────────────────────────────────────
+      return res.status(200).json({
+        students: students.map(shapeStudent),
+
         pagination: {
           total,
-          page:       pageNum,
-          limit:      limitNum,
-          totalPages: Math.ceil(total / limitNum),
-          hasNext:    pageNum * limitNum < total,
-          hasPrev:    pageNum > 1,
+          page: pageNum,
+          limit: limitNum,
+          totalPages,
+          hasNext: usePagination
+            ? pageNum * limitNum < total
+            : false,
+          hasPrev: usePagination
+            ? pageNum > 1
+            : false,
         },
-        _debug: { adminDept, queryDept, targetDept, total },   // REMOVE after fixing
+
+        _debug: {
+          adminDept,
+          queryDept,
+          targetDept,
+          total,
+          returned: students.length,
+          paginationEnabled: usePagination,
+        },
       });
+
     } catch (err) {
       console.error('getStudents:', err);
-      res.status(500).json({ message: 'Server error' });
+
+      return res.status(500).json({
+        message: 'Server error',
+        error: err.message,
+      });
     }
   },
 ];

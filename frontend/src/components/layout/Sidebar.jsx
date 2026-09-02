@@ -11,6 +11,7 @@ import {
   FiLogOut,
   FiSettings,
   FiList,
+  FiCamera,
 } from "react-icons/fi";
 
 const Sidebar = () => {
@@ -19,6 +20,7 @@ const Sidebar = () => {
   const menuItems = [
     { path: "/admin/dashboard", name: "Dashboard", icon: <FiHome /> },
     { path: "/admin/add-student", name: "Add Student", icon: <FiUserPlus /> },
+    { path: "/admin/student-registration-qr", name: "Registration QR", icon: <FiCamera />, },
     { path: "/admin/view-students", name: "View Students", icon: <FiUsers /> },
     { path: "/admin/student-scores", name: "Scores", icon: <FiBarChart2 /> },
     { path: "/admin/create-exam", name: "Create Exam", icon: <FiFileText /> },

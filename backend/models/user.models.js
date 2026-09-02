@@ -34,6 +34,16 @@ const userSchema = new mongoose.Schema({
     trim: true,
   },
 
+  mobile: {
+    type: String,
+    trim: true,
+  },
+
+  college: {
+    type: String,
+    trim: true,
+  },
+
   password: {
     type: String,
     required: true,

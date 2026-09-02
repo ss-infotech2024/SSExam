@@ -16,6 +16,9 @@ import StudentDashboard from "../pages/student/StudentDashboard";
 import StudentExams from "../pages/student/Studentexams";
 import StudentResults from "../pages/student/StudentResults";
 import ExamAttempts from "../pages/admin/ExamAttempts";
+import QRScanner from "../pages/admin/QRScanner";
+import StudentRegistrationQR from "../pages/admin/StudentRegistrationQR";
+import StudentRegistration from "../pages/student/StudentRegistration";
 
 // ─── PROTECTED ROUTE ──────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -52,6 +55,17 @@ const AppRouter = () => {
       <Route path="/superadmin/students"    element={<SuperAdminDashboard />} />
       <Route path="/superadmin/departments" element={<SuperAdminDashboard />} />
       <Route path="/superadmin/settings"    element={<SuperAdminDashboard />} />
+      
+      <Route
+        path="/admin/qr-scanner"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminLayout>
+              <QRScanner />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* ── Admin ── */}
       <Route path="/admin/*" element={
@@ -65,6 +79,22 @@ const AppRouter = () => {
           <AdminLayout><AdminDashboard /></AdminLayout>
         </ProtectedRoute>
       }/>
+
+      <Route
+        path="/admin/student-registration-qr"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminLayout>
+              <StudentRegistrationQR />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/student-registration/:token"
+        element={<StudentRegistration />}
+      />
 
       <Route path="/admin/add-student" element={
         <ProtectedRoute allowedRoles={["admin"]}>

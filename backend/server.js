@@ -9,6 +9,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import studentExamRoutes from './routes/examRoutes.js';
 import examAttemptroutes from './routes/examattemptroutes.js';
+import qrScanRoutes from "./routes/qrScanRoutes.js";
+import registrationRoutes from "./routes/registrationRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -44,6 +46,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/student', studentExamRoutes);
 app.use('/api', examAttemptroutes);
+app.use("/api/admin/qr-scanner", qrScanRoutes);
 
 // Health check (VERY IMPORTANT for Render)
 app.get("/", (req, res) => {
@@ -55,6 +58,11 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: err.message });
 });
+
+app.use(
+  "/api/student-registration",
+  registrationRoutes
+);
 
 // PORT (Render uses env PORT)
 const PORT = process.env.PORT || 5000;

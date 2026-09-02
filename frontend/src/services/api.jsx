@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance
 const API = axios.create({
-  baseURL: "https://ssexam.onrender.com/api", // 🔹 Change when deployed
+  baseURL: "http://localhost:5000/api", // 🔹 Change when deployed
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -38,5 +38,54 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ==========================================
+// QR SCANNER APIs
+// ==========================================
+
+// 🔍 Scan Student QR
+export const scanStudentQR = (studentId, examId) => {
+  return API.post("/admin/qr-scanner/scan", {
+    studentId,
+    examId,
+  });
+};
+
+// 📊 Get QR Scan Count
+export const getQRScanCount = (examId) => {
+  return API.get("/admin/qr-scanner/count", {
+    params: {
+      examId,
+    },
+  });
+};
+
+// 📋 Get All QR Scans
+export const getQRScans = (examId) => {
+  return API.get("/admin/qr-scanner/scans", {
+    params: {
+      examId,
+    },
+  });
+};
+
+// ==========================================
+// STUDENT REGISTRATION QR
+// ==========================================
+
+export const generateRegistrationQR = () => {
+  return API.post("/student-registration/generate");
+};
+
+export const getRegistrationQR = (token) => {
+  return API.get(`/student-registration/${token}`);
+};
+
+export const registerStudentFromQR = (token, studentData) => {
+  return API.post(
+    `/student-registration/${token}/register`,
+    studentData
+  );
+};
 
 export default API;
