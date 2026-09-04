@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema({
   department: {
     type: String,
     enum: ['Data Bricks', 'Service Now', 'MCA', null],
-    required: function () { return this.role !== 'superadmin'; },
     default: null,
   },
 
@@ -66,10 +65,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
-plainPassword: {
-  type: String,
-  default: '',
-},
+
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
@@ -121,15 +117,22 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 // ─── STATIC: Get next student ID for a department ────────────────────────────
 userSchema.statics.getNextStudentId = async function(department) {
-  const lastStudent = await this.findOne(
-    { 
-      role: 'student', 
-      department: department, 
-      studentId: { $ne: null, $exists: true, $type: 'number' }
-    }
-  ).sort({ studentId: -1 }).select('studentId').lean();
-  
-  return lastStudent ? lastStudent.studentId + 1 : 101;
+  const lastStudent = await this.findOne({
+    role: "student",
+    department: department,
+    studentId: {
+      $ne: null,
+      $exists: true,
+      $type: "number",
+    },
+  })
+    .sort({ studentId: -1 })
+    .select("studentId")
+    .lean();
+
+  return lastStudent
+    ? lastStudent.studentId + 1
+    : 101;
 };
 
 // ─── STATIC: Find by department ──────────────────────────────────────────────

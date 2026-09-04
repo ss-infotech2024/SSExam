@@ -12,6 +12,7 @@ export const generateRegistrationQR = async (req, res) => {
     const registrationQR = await RegistrationQR.create({
       token,
       createdBy: req.user._id,
+      department: req.user.department,
       active: true,
     });
 
@@ -62,6 +63,8 @@ export const getRegistrationQR = async (req, res) => {
       });
     }
 
+    const department = registrationQR.department;
+    
     res.json({
       success: true,
       message: "Registration QR is valid.",
@@ -91,60 +94,93 @@ export const registerStudentFromQR = async (req, res) => {
       email,
       mobile,
       college,
-      department,
+      password,
       rollNumber,
     } = req.body;
 
     // -------------------------------------------------
     // 1. CHECK QR
     // -------------------------------------------------
+
     const registrationQR = await RegistrationQR.findOne({
       token,
       active: true,
     });
 
+    
     if (!registrationQR) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired registration QR.",
       });
     }
-
+    
+    const department = registrationQR.department;
     // -------------------------------------------------
     // 2. REQUIRED FIELDS
     // -------------------------------------------------
+
     if (
       !fullName ||
       !email ||
       !mobile ||
-      !department
+      !password
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Full name, email, mobile and department are required.",
+          "Full name, email, mobile and password are required.",
       });
     }
 
     // -------------------------------------------------
-    // 3. VALID DEPARTMENT
+    // 3. PASSWORD VALIDATION
     // -------------------------------------------------
-    const allowedDepartments = [
-      "Data Bricks",
-      "Service Now",
-      "MCA",
-    ];
 
-    if (!allowedDepartments.includes(department)) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Invalid department.",
+        message:
+          "Password must be at least 8 characters long.",
+      });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one uppercase letter.",
+      });
+    }
+
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one lowercase letter.",
+      });
+    }
+
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one number.",
+      });
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one special character.",
       });
     }
 
     // -------------------------------------------------
     // 4. CHECK DUPLICATE EMAIL
     // -------------------------------------------------
+
     const existingStudent = await User.findOne({
       email: email.toLowerCase().trim(),
     });
@@ -160,65 +196,55 @@ export const registerStudentFromQR = async (req, res) => {
     // -------------------------------------------------
     // 5. GENERATE NEXT STUDENT ID
     // -------------------------------------------------
+
     const studentId =
       await User.getNextStudentId(department);
 
     // Example:
-    // Data Bricks -> 101
-    // Data Bricks -> 102
-    // Data Bricks -> 103
+    // Existing highest = 160
+    // New student = 161
 
     // -------------------------------------------------
-    // 6. GENERATE PASSWORD
+    // 6. GENERATE ROLL NUMBER
     // -------------------------------------------------
-    const password = `Student@${studentId}`;
 
-    // -------------------------------------------------
-    // 7. GENERATE ROLL NUMBER
-    // -------------------------------------------------
     const finalRollNumber =
       rollNumber?.trim() ||
       `STUDENT${studentId}`;
 
     // -------------------------------------------------
-    // 8. CREATE STUDENT
+    // 7. CREATE STUDENT
     // -------------------------------------------------
+
     const student = await User.create({
       fullName: fullName.trim(),
-
       studentId: studentId,
-
       rollNumber: finalRollNumber,
-
-      department: department,
-
       email: email.toLowerCase().trim(),
-
       password: password,
-
-      plainPassword: password,
-
       role: "student",
-
       status: "active",
 
+      // IMPORTANT
+      department: department,
+
       createdBy: registrationQR.createdBy,
-
       mobile: mobile.trim(),
-
       college: college?.trim() || "",
     });
 
     // -------------------------------------------------
-    // 9. UPDATE QR REGISTRATION COUNT
+    // 8. UPDATE QR REGISTRATION COUNT
     // -------------------------------------------------
+
     registrationQR.totalRegistrations += 1;
 
     await registrationQR.save();
 
     // -------------------------------------------------
-    // 10. SUCCESS RESPONSE
+    // 9. SUCCESS RESPONSE
     // -------------------------------------------------
+
     return res.status(201).json({
       success: true,
 
@@ -230,13 +256,13 @@ export const registerStudentFromQR = async (req, res) => {
 
         fullName: student.fullName,
 
+        name: student.fullName,
+
         email: student.email,
 
         mobile: student.mobile,
 
         college: student.college,
-
-        department: student.department,
 
         studentId: student.studentId,
 
@@ -244,8 +270,6 @@ export const registerStudentFromQR = async (req, res) => {
           `STUDENT${student.studentId}`,
 
         rollNumber: student.rollNumber,
-
-        password: password,
       },
     });
 
@@ -258,10 +282,23 @@ export const registerStudentFromQR = async (req, res) => {
 
     // Duplicate MongoDB key
     if (error.code === 11000) {
+      if (error.keyPattern?.email) {
+        return res.status(409).json({
+          success: false,
+          message: "A student with this email already exists.",
+        });
+      }
+
+      if (error.keyPattern?.studentId) {
+        return res.status(409).json({
+          success: false,
+          message: "Student ID already exists. Please try again.",
+        });
+      }
+
       return res.status(409).json({
         success: false,
-        message:
-          "Student already exists with this email or student ID.",
+        message: "Duplicate student record.",
       });
     }
 

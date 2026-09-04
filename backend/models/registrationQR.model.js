@@ -15,6 +15,13 @@ const registrationQRSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Department of the admin who generated this QR
+    department: {
+      type: String,
+      enum: ["Data Bricks", "Service Now", "MCA"],
+      required: true,
+    },
+
     active: {
       type: Boolean,
       default: true,

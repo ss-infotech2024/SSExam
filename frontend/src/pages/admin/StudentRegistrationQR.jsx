@@ -9,6 +9,7 @@ const StudentRegistrationQR = () => {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
 
   const handleGenerateQR = async () => {
     try {
@@ -16,14 +17,15 @@ const StudentRegistrationQR = () => {
       setError("");
 
       const response = await generateRegistrationQR();
-
+      console.log("QR API RESPONSE:", response);
+      console.log("QR API DATA:", response.data);
       const data = response.data;
 
       if (!data.success) {
         throw new Error(data.message);
       }
 
-      const url = data.qr.registrationURL;
+      const url = data.registrationURL;
 
       const qrDataURL = await QRCode.toDataURL(url, {
         width: 400,

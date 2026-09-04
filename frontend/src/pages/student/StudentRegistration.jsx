@@ -21,7 +21,8 @@ const StudentRegistration = () => {
     email: "",
     mobile: "",
     college: "",
-    department: "",
+    password: "",
+    confirmPassword: "",
     rollNumber: "",
   });
 
@@ -62,6 +63,29 @@ const StudentRegistration = () => {
   };
 
   // ==========================================
+  // PASSWORD VALIDATION
+  // ==========================================
+
+  const passwordChecks = {
+    length: form.password.length >= 8,
+    uppercase: /[A-Z]/.test(form.password),
+    lowercase: /[a-z]/.test(form.password),
+    number: /[0-9]/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+  };
+
+  const isStrongPassword =
+    passwordChecks.length &&
+    passwordChecks.uppercase &&
+    passwordChecks.lowercase &&
+    passwordChecks.number &&
+    passwordChecks.special;
+
+  const passwordsMatch =
+    form.password.length > 0 &&
+    form.password === form.confirmPassword;
+
+  // ==========================================
   // SUBMIT
   // ==========================================
 
@@ -72,10 +96,14 @@ const StudentRegistration = () => {
       setSubmitting(true);
       setError("");
 
-      const response = await registerStudentFromQR(
-        token,
-        form
-      );
+      const response = await registerStudentFromQR(token, {
+        fullName: form.fullName,
+        email: form.email,
+        mobile: form.mobile,
+        college: form.college,
+        password: form.password,
+        rollNumber: form.rollNumber,
+      });
 
       if (response.data.success) {
         setSuccess(response.data.student);
@@ -233,29 +261,140 @@ const StudentRegistration = () => {
               className="w-full rounded-lg border p-3"
             />
 
+            {/* ==========================================
+                  PASSWORD
+              ========================================== */}
 
-            <input
-              type="text"
-              name="department"
-              placeholder="Department"
-              value={form.department}
-              onChange={handleChange}
-              className="w-full rounded-lg border p-3"
-            />
+              <div>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-lg border p-3"
+                />
 
+                {/* Password Checklist */}
+
+                {form.password.length > 0 && (
+                  <div className="mt-3 rounded-lg bg-gray-50 p-4">
+
+                    <p className="mb-3 text-sm font-semibold text-gray-700">
+                      Password must contain:
+                    </p>
+
+                    <div className="space-y-2 text-sm">
+
+                      <div
+                        className={
+                          passwordChecks.length
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }
+                      >
+                        {passwordChecks.length ? "✓" : "○"} At least 8 characters
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.uppercase
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }
+                      >
+                        {passwordChecks.uppercase ? "✓" : "○"} One uppercase letter (A-Z)
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.lowercase
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }
+                      >
+                        {passwordChecks.lowercase ? "✓" : "○"} One lowercase letter (a-z)
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.number
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }
+                      >
+                        {passwordChecks.number ? "✓" : "○"} One number (0-9)
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.special
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }
+                      >
+                        {passwordChecks.special ? "✓" : "○"} One special character (!@#$%)
+                      </div>
+
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+              {/* ==========================================
+                    CONFIRM PASSWORD
+                ========================================== */}
+
+                <div>
+
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    className={`w-full rounded-lg border p-3 ${
+                      form.confirmPassword.length > 0
+                        ? passwordsMatch
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : "border-gray-300"
+                    }`}
+                  />
+
+                  {form.confirmPassword.length > 0 && (
+                    <p
+                      className={`mt-2 text-sm ${
+                        passwordsMatch
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {passwordsMatch
+                        ? "✓ Passwords match"
+                        : "✗ Passwords do not match"}
+                    </p>
+                  )}
+
+                </div>
 
             {error && (
               <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}
-
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-lg bg-blue-600 p-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
+              <button
+                type="submit"
+                disabled={
+                  submitting ||
+                  !isStrongPassword ||
+                  !passwordsMatch
+                }
+                className="w-full rounded-lg bg-blue-600 p-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
               {submitting
                 ? "Creating Student..."
                 : "Register"}
