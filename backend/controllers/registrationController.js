@@ -16,12 +16,13 @@ export const generateRegistrationQR = async (req, res) => {
       active: true,
     });
 
-    const frontendURL =
-      process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendURL = (
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    ).replace(/\/+$/, "");
 
     const registrationURL =
       `${frontendURL}/student-registration/${token}`;
-
+      
     res.status(201).json({
       success: true,
       message: "Registration QR generated successfully.",
