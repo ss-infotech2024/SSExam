@@ -11,6 +11,7 @@ import studentExamRoutes from './routes/examRoutes.js';
 import examAttemptroutes from './routes/examattemptroutes.js';
 import qrScanRoutes from "./routes/qrScanRoutes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
+import departmentRoutes from "./routes/departmentRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/student', studentExamRoutes);
 app.use('/api', examAttemptroutes);
 app.use("/api/admin/qr-scanner", qrScanRoutes);
+app.use("/api/departments", departmentRoutes);
 
 // Health check (VERY IMPORTANT for Render)
 app.get("/", (req, res) => {

@@ -1,8 +1,7 @@
 // controllers/authController.js
 import jwt        from 'jsonwebtoken';
 import User       from '../models/user.models.js';
-
-const DEPARTMENTS = ['IT', 'CS', 'CE', 'ECE'];
+import Department from "../models/department.model.js";
 
 // ─── JWT helper ───────────────────────────────────────────────────────────────
 const signToken = (payload) =>
@@ -180,10 +179,19 @@ export const studentRegister = async (req, res) => {
     if (!password)          return res.status(400).json({ message: 'Password is required.' });
     if (!department)        return res.status(400).json({ message: 'Department is required.' });
 
-    const dept = department.toUpperCase();
-    if (!DEPARTMENTS.includes(dept)) {
-      return res.status(400).json({ message: `Department must be one of: ${DEPARTMENTS.join(', ')}` });
+    const departmentExists = await Department.findOne({
+      name: { $regex: `^${department.trim()}$`, $options: "i" },
+      active: true,
+    });
+
+    if (!departmentExists) {
+      return res.status(400).json({
+        message: "Invalid or inactive department.",
+      });
     }
+
+    const dept = departmentExists.name;
+
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters.' });
     }

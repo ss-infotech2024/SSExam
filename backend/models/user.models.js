@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
 
   department: {
     type: String,
-    enum: ['Data Bricks', 'Service Now', 'MCA', null],
+    trim: true,
     default: null,
   },
 
