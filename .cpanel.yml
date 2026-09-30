@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/sgilbcav/public_html/exam
+    - /bin/cp -R dist/* $DEPLOYPATH

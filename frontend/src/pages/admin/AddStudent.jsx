@@ -1,0 +1,849 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import {
+  FiUser, FiLock, FiBookOpen, FiPlusCircle,
+  FiCheckCircle, FiMail, FiEye, FiEyeOff, FiUsers,
+  FiTrendingUp, FiClock, FiAlertCircle, FiUpload,
+  FiX, FiRefreshCw, FiHash, FiDownload, FiShield,
+} from "react-icons/fi";
+import * as XLSX from "xlsx";
+
+// ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
+const axiosInstance = axios.create({
+  // baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api" || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    window.location.href = "/";
+    return Promise.reject(new Error("Not authenticated"));
+  }
+  return config;
+});
+
+axiosInstance.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("adminDepartment");
+      window.location.href = "/";
+      return Promise.reject(new Error("Session expired. Please log in again."));
+    }
+    const message =
+      err.response?.data?.message ||
+      err.response?.data?.errors?.[0]?.msg ||
+      err.message ||
+      "Something went wrong";
+    return Promise.reject(new Error(message));
+  }
+);
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+const api = {
+  fetchStudents: (department) =>
+    axiosInstance
+      .get("/admin/students", { params: { department } })
+      .then((r) => r.data),
+
+  createStudent: (body) =>
+    axiosInstance
+      .post("/admin/create-student", body)
+      .then((r) => r.data),
+
+  // Bulk upload — backend sends Excel binary directly
+  bulkAddStudents: (file) => {
+    const fd = new FormData();
+    fd.append("excelFile", file);
+    return axiosInstance
+      .post("/admin/students/bulk", fd, { responseType: "blob" })
+      .then((r) => r);
+  },
+
+  // ✅ NEW: Download all students with passwords from backend
+  downloadAllStudents: (department) =>
+    axiosInstance
+      .get("/admin/students/download-all", {
+        params: { department },
+        responseType: "blob",
+      })
+      .then((r) => r),
+};
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const DEPARTMENTS = ["Data Bricks", "Service Now"];
+
+const DEPT_LABELS = {
+  DB: "Data Bricks",
+  SN: "Service Now",
+};
+
+const EMPTY_FORM = { fullName: "", email: "", password: "", studentId: "" };
+
+// ─── DEPARTMENT STYLE MAP ─────────────────────────────────────────────────────
+const getDeptStyle = (dept = "") => {
+  const map = {
+    DB: { icon: "🌐", lightBg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", bg: "bg-purple-600", hoverBg: "hover:bg-purple-700", ring: "ring-purple-500" },
+    SN: { icon: "💻", lightBg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   bg: "bg-blue-600",   hoverBg: "hover:bg-blue-700",   ring: "ring-blue-500"   },
+  };
+  return map[dept] || {
+    icon: "📚", lightBg: "bg-gray-50", border: "border-gray-200",
+    text: "text-gray-700", bg: "bg-gray-600", hoverBg: "hover:bg-gray-700", ring: "ring-gray-500",
+  };
+};
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+const Toast = ({ message, type, onClose }) => (
+  <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl text-sm font-semibold
+    ${type === "success" ? "bg-emerald-600 text-white" : "bg-red-500 text-white"}`}>
+    {type === "success"
+      ? <FiCheckCircle className="w-4 h-4 shrink-0" />
+      : <FiAlertCircle className="w-4 h-4 shrink-0" />}
+    <span>{message}</span>
+    <button onClick={onClose} className="ml-1 opacity-70 hover:opacity-100">
+      <FiX className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+// ─── DOWNLOAD HELPER ──────────────────────────────────────────────────────────
+const downloadBlob = (blob, filename) => {
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href     = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═════════════════════════════════════════════════════════════════════════════
+const AddStudent = () => {
+  const navigate = useNavigate();
+
+  const [adminDepartment, setAdminDepartment] = useState("");
+  const [students,        setStudents]        = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+
+  const [formData,     setFormData]     = useState(EMPTY_FORM);
+  const [errors,       setErrors]       = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [excelFile,    setExcelFile]    = useState(null);
+  const [excelPreview, setExcelPreview] = useState([]);
+  const [bulkErrors,   setBulkErrors]   = useState([]);
+  const [bulkLoading,  setBulkLoading]  = useState(false);
+
+  const [downloadingAll, setDownloadingAll] = useState(false);
+
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4500);
+  }, []);
+
+  // ── Auth guard ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const role  = localStorage.getItem("userRole");
+    const dept  = localStorage.getItem("adminDepartment");
+    const token = localStorage.getItem("token");
+
+    if (!token || role !== "admin" || !dept) {
+      navigate("/");
+      return;
+    }
+
+    setAdminDepartment(dept);
+    loadStudents(dept);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadStudents = async (dept) => {
+    setLoadingStudents(true);
+    try {
+      const data = await api.fetchStudents(dept);
+      setStudents(data.students || []);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  // ── Derived stats ──────────────────────────────────────────────────────────
+  const deptStudents   = students.filter(
+    (s) => (s.department || "").toUpperCase() === (adminDepartment || "").toUpperCase()
+  );
+  const activeCount    = deptStudents.filter((s) => s.status === "active").length;
+  const currentMonth   = new Date().toISOString().slice(0, 7);
+  const thisMonthCount = deptStudents.filter((s) =>
+    (s.joinDate || s.createdAt || "").startsWith(currentMonth)
+  ).length;
+
+  const deptStyle = getDeptStyle(adminDepartment);
+
+  // ── Single form ────────────────────────────────────────────────────────────
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const validateForm = () => {
+    const e = {};
+    if (!formData.fullName.trim())                e.fullName = "Full name is required";
+    else if (formData.fullName.trim().length < 3) e.fullName = "Name must be at least 3 characters";
+    if (!formData.email.trim())                   e.email    = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+                                                  e.email    = "Please enter a valid email";
+    if (!formData.password)                       e.password = "Password is required";
+    else if (formData.password.length < 6)        e.password = "Min 6 characters";
+    if (formData.studentId.trim()) {
+      const sid = Number(formData.studentId);
+      if (!Number.isInteger(sid) || sid < 1) e.studentId = "Student ID must be a positive whole number";
+    }
+    return e;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errs = validateForm();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    setIsSubmitting(true);
+    try {
+      const data = await api.createStudent({
+        fullName:   formData.fullName.trim(),
+        email:      formData.email.trim(),
+        password:   formData.password,
+        department: adminDepartment,
+        ...(formData.studentId.trim() ? { studentId: Number(formData.studentId) } : {}),
+      });
+
+      const created = data.student || data;
+      setStudents((p) => [created, ...p]);
+      setFormData(EMPTY_FORM);
+      const assignedId = created.studentId ?? created._id?.toString().slice(-4);
+      showToast(`Student added! Assigned ID: ${assignedId ?? "assigned"}`);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── Excel preview ──────────────────────────────────────────────────────────
+  const handleExcelFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setExcelFile(file);
+    setBulkErrors([]);
+    setExcelPreview([]);
+
+    try {
+      const buffer   = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, {
+        header: 1, defval: "", blankrows: false,
+      });
+
+      if (jsonData.length < 2) {
+        setBulkErrors(["File is empty or has no data rows."]);
+        return;
+      }
+
+      const headers = jsonData[0].map((h) =>
+        String(h || "").trim().toLowerCase().replace(/\s+/g, "")
+      );
+
+      const col = (aliases) =>
+        aliases.reduce((found, a) => (found !== -1 ? found : headers.indexOf(a)), -1);
+
+      const nameIdx  = col(["name", "fullname", "studentname"]);
+      const emailIdx = headers.findIndex((h) => h.includes("email"));
+      const passIdx  = headers.findIndex((h) => h.includes("pass"));
+      const deptIdx  = col(["department", "dept", "branch"]);
+
+      if (nameIdx === -1 || emailIdx === -1) {
+        setBulkErrors([
+          "Missing required columns. Your Excel must have:",
+          "• Name  (or Full Name / Student Name)",
+          "• Email",
+          "Optional: Password, Department (DB, SN)",
+          "Student ID is auto-assigned — no column needed.",
+        ]);
+        return;
+      }
+
+      const tempErrors = [];
+      const parsed = jsonData.slice(1).map((row, idx) => {
+        const name  = String(row[nameIdx]  || "").trim();
+        const email = String(row[emailIdx] || "").trim();
+        const pass  = passIdx !== -1 ? String(row[passIdx] || "").trim() : "";
+        const dept  = deptIdx !== -1
+          ? String(row[deptIdx] || "").trim().toUpperCase()
+          : adminDepartment;
+
+        if (!name || !email) return null;
+
+        if (!email.includes("@")) {
+          tempErrors.push(`Row ${idx + 2}: Invalid email "${email}"`);
+          return null;
+        }
+
+        if (dept && !DEPARTMENTS.includes(dept)) {
+          tempErrors.push(
+            `Row ${idx + 2}: Unknown department "${dept}" — will use ${adminDepartment}`
+          );
+        }
+
+        return {
+          name,
+          email,
+          password:   pass || "Student@123",
+          department: DEPARTMENTS.includes(dept) ? dept : adminDepartment,
+        };
+      }).filter(Boolean);
+
+      setExcelPreview(parsed);
+      setBulkErrors(tempErrors);
+    } catch (err) {
+      setBulkErrors(["Could not read file. Make sure it's a valid .xlsx file."]);
+    }
+  };
+
+  // ── Bulk upload ────────────────────────────────────────────────────────────
+  const confirmBulkAdd = async () => {
+    if (!excelFile || !excelPreview.length) return;
+    setBulkLoading(true);
+    try {
+      const response = await api.bulkAddStudents(excelFile);
+
+      const errorsHeader = response.headers["x-errors"] || "[]";
+      let parsedErrors = [];
+      try {
+        parsedErrors = JSON.parse(errorsHeader);
+      } catch {
+        parsedErrors = [];
+      }
+
+      const insertedCount = parseInt(response.headers["x-inserted-count"] || "0", 10);
+      const failedCount   = parseInt(response.headers["x-failed-count"]   || "0", 10);
+
+      const filename = response.headers["x-filename"] || `students_credentials_${Date.now()}.xlsx`;
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      downloadBlob(blob, filename);
+
+      if (insertedCount > 0 && failedCount > 0) {
+        showToast(`Added ${insertedCount} student(s). ${failedCount} skipped (duplicates). Credentials Excel downloaded!`);
+      } else if (insertedCount > 0) {
+        showToast(`Successfully added ${insertedCount} student(s)! Credentials Excel downloaded!`);
+      } else {
+        showToast("No new students added — all records already exist.", "error");
+      }
+
+      await loadStudents(adminDepartment);
+      clearExcel();
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // ✅ UPDATED: Download all students — now calls backend to include passwords
+  const downloadAllStudents = async () => {
+    if (!deptStudents.length) return;
+    setDownloadingAll(true);
+
+    try {
+      const response = await api.downloadAllStudents(adminDepartment);
+
+      // Extract filename from Content-Disposition header
+      const disposition = response.headers["content-disposition"] || "";
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+      const filename =
+        filenameMatch?.[1] ||
+        `${adminDepartment}_students_with_passwords_${Date.now()}.xlsx`;
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      downloadBlob(blob, filename);
+
+      const totalCount = response.headers["x-total-count"] || deptStudents.length;
+      showToast(`Downloaded ${totalCount} student records with passwords!`);
+    } catch (err) {
+      showToast(err.message || "Failed to download Excel file.", "error");
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
+  const clearExcel = () => {
+    setExcelFile(null);
+    setExcelPreview([]);
+    setBulkErrors([]);
+  };
+
+  // ─── RENDER ────────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <div className="max-w-7xl mx-auto">
+
+        {/* ── HEADER ── */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Add New Student</h1>
+              <p className="text-gray-600 mt-1 flex items-center gap-2 text-sm">
+                <FiUsers className="w-4 h-4" /> Manage students for your department
+              </p>
+            </div>
+            <div className={`px-5 py-3 ${deptStyle.lightBg} rounded-xl border ${deptStyle.border} flex items-center gap-3`}>
+              <span className="text-2xl">{deptStyle.icon}</span>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Your Department</p>
+                <p className={`text-sm font-black ${deptStyle.text}`}>
+                  {adminDepartment} — {DEPT_LABELS[adminDepartment] || ""}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {[
+              { icon: FiUsers,      label: "Total Students", value: deptStudents.length, bg: deptStyle.lightBg, color: deptStyle.text },
+              { icon: FiTrendingUp, label: "Active",         value: activeCount,         bg: "bg-green-100",    color: "text-green-600" },
+              { icon: FiClock,      label: "This Month",     value: thisMonthCount,      bg: "bg-blue-100",     color: "text-blue-600"  },
+            ].map(({ icon: Icon, label, value, bg, color }) => (
+              <div key={label} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-5 h-5 ${color}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">{label}</p>
+                  {loadingStudents
+                    ? <div className="h-7 w-10 bg-gray-200 rounded animate-pulse mt-0.5" />
+                    : <p className="text-2xl font-bold text-gray-900">{value}</p>
+                  }
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── INFO BANNER ── */}
+        <div className={`mb-6 p-4 ${deptStyle.lightBg} border ${deptStyle.border} rounded-xl flex items-start gap-3`}>
+          <FiBookOpen className={`w-5 h-5 ${deptStyle.text} mt-0.5 shrink-0`} />
+          <div className="text-sm">
+            <p className={`${deptStyle.text} font-semibold`}>
+              Student IDs are auto-assigned starting from 101 per department
+            </p>
+            <p className="text-gray-500 mt-0.5">
+              Departments: <strong>DB</strong>, <strong>SN</strong>.
+              Bulk Excel only needs <strong>Name</strong> and <strong>Email</strong> — no ID column required.
+              After bulk upload, a credentials Excel is auto-downloaded.
+            </p>
+          </div>
+        </div>
+
+        {/* ── BULK UPLOAD ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8 shadow-sm">
+          <div className={`px-6 py-4 border-b border-gray-200 ${deptStyle.lightBg} flex items-center gap-3`}>
+            <div className={`w-10 h-10 rounded-xl ${deptStyle.bg} flex items-center justify-center shrink-0`}>
+              <FiUpload className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Bulk Add via Excel</h2>
+              <p className="text-xs text-gray-500">
+                Required: <strong>Name</strong>, <strong>Email</strong> ·
+                Optional: Password, Department (DB, SN) ·
+                <em> Credentials Excel auto-downloaded after upload</em>
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* File picker */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Excel File (.xlsx, .xls)
+              </label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleExcelFileChange}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
+                  file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+              />
+              {excelFile && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                  <span>Selected: <strong>{excelFile.name}</strong></span>
+                  <button onClick={clearExcel} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Warnings */}
+            {bulkErrors.length > 0 && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-amber-800 font-semibold text-sm mb-2">Warnings:</p>
+                <ul className="text-sm text-amber-700 list-disc pl-5 space-y-1">
+                  {bulkErrors.map((err, i) => <li key={i}>{err}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Preview table */}
+            {excelPreview.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-gray-800">
+                    Preview — {excelPreview.length} student{excelPreview.length !== 1 ? "s" : ""}
+                  </p>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+                    IDs assigned by server (101, 102…)
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-xl max-h-64">
+                  <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        {["#", "Full Name", "Email", "Department", "Password"].map((h) => (
+                          <th key={h} className="px-4 py-2.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-50">
+                      {excelPreview.map((row, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{i + 1}</td>
+                          <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{row.name}</td>
+                          <td className="px-4 py-2.5 text-sm text-gray-500">{row.email}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md
+                              ${getDeptStyle(row.department).lightBg} ${getDeptStyle(row.department).text}`}>
+                              {row.department}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{row.password}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg">
+                  <FiDownload className="w-4 h-4 text-green-600 shrink-0" />
+                  <p className="text-xs text-green-700 font-medium">
+                    After upload, a credentials Excel (Student ID, Name, Email, Password) will be automatically downloaded.
+                  </p>
+                </div>
+
+                <button
+                  onClick={confirmBulkAdd}
+                  disabled={bulkLoading}
+                  className={`mt-4 inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold
+                    ${deptStyle.bg} ${deptStyle.hoverBg} disabled:opacity-50 disabled:cursor-not-allowed
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 ${deptStyle.ring} transition-all shadow-sm`}
+                >
+                  {bulkLoading
+                    ? <><FiRefreshCw className="w-4 h-4 animate-spin" /> Uploading &amp; Downloading…</>
+                    : <><FiCheckCircle className="w-4 h-4" /> Confirm &amp; Add {excelPreview.length} Student{excelPreview.length !== 1 ? "s" : ""}</>
+                  }
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── SINGLE STUDENT FORM ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8 shadow-sm">
+          <div className={`px-6 py-4 border-b border-gray-200 ${deptStyle.lightBg} flex items-center gap-3`}>
+            <div className={`w-10 h-10 rounded-xl ${deptStyle.bg} flex items-center justify-center shrink-0`}>
+              <FiPlusCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">New Student Registration</h2>
+              <p className="text-xs text-gray-500">Student ID is auto-assigned after submission</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiUser className={`w-4 h-4 ${errors.fullName ? "text-red-400" : "text-gray-400"}`} />
+                  </div>
+                  <input
+                    type="text" name="fullName" value={formData.fullName} onChange={handleChange}
+                    placeholder="John Doe"
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors
+                      ${errors.fullName ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`}
+                  />
+                </div>
+                {errors.fullName && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5" /> {errors.fullName}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiMail className={`w-4 h-4 ${errors.email ? "text-red-400" : "text-gray-400"}`} />
+                  </div>
+                  <input
+                    type="email" name="email" value={formData.email} onChange={handleChange}
+                    placeholder="student@example.com"
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors
+                      ${errors.email ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5" /> {errors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiLock className={`w-4 h-4 ${errors.password ? "text-red-400" : "text-gray-400"}`} />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password" value={formData.password} onChange={handleChange}
+                    placeholder="••••••••"
+                    className={`block w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors
+                      ${errors.password ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`}
+                  />
+                  <button type="button" onClick={() => setShowPassword((s) => !s)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    {showPassword
+                      ? <FiEyeOff className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                      : <FiEye    className="w-4 h-4 text-gray-400 hover:text-gray-600" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5" /> {errors.password}
+                  </p>
+                )}
+              </div>
+
+             
+
+              {/* Department — locked */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">Department</label>
+                <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border ${deptStyle.border} ${deptStyle.lightBg}`}>
+                  <FiUsers className={`w-4 h-4 shrink-0 ${deptStyle.text}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${deptStyle.text}`}>
+                      {adminDepartment} — {DEPT_LABELS[adminDepartment] || adminDepartment}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Locked · you can only add students to your department
+                    </p>
+                  </div>
+                  <span className="text-xl shrink-0">{deptStyle.icon}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ID hint */}
+            <div className="mt-5 flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <FiHash className="w-4 h-4 text-gray-400 shrink-0" />
+              <p className="text-xs text-gray-500">
+                Leave <strong>Student ID</strong> blank to auto-assign the next available ID for your department
+                (e.g. <span className="font-mono font-bold text-gray-700">101</span>,{" "}
+                <span className="font-mono font-bold text-gray-700">102</span>…), or
+                enter a custom ID manually. IDs must be unique within the same department.
+              </p>
+            </div>
+
+            <button
+              type="submit" disabled={isSubmitting}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3
+                bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl
+                disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2
+                focus:ring-blue-500 transition-all text-sm shadow-sm">
+              {isSubmitting
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Adding Student…</>
+                : <><FiPlusCircle className="w-4 h-4" /> Add Student</>
+              }
+            </button>
+          </form>
+        </div>
+
+        {/* ── STUDENTS LIST ── */}
+        {(loadingStudents || deptStudents.length > 0) && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <FiUsers className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    {adminDepartment} — {DEPT_LABELS[adminDepartment]} Students
+                  </h3>
+                  <p className="text-xs text-gray-500">Sorted by Student ID (ascending)</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* ✅ UPDATED: Download All button — now fetches from backend with passwords */}
+                {!loadingStudents && deptStudents.length > 0 && (
+                  <button
+                    onClick={downloadAllStudents}
+                    disabled={downloadingAll}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700
+                      text-white text-xs font-bold rounded-lg transition-colors shadow-sm
+                      disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Download Excel with Student ID, Name, Email, Password, Department, Status, Join Date"
+                  >
+                    {downloadingAll
+                      ? <><FiRefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating…</>
+                      : <><FiShield className="w-3.5 h-3.5" /> Download All with Passwords</>
+                    }
+                  </button>
+                )}
+
+                <span className={`px-3 py-1 ${deptStyle.lightBg} ${deptStyle.text} rounded-lg text-xs font-bold`}>
+                  {deptStudents.length} Total
+                </span>
+              </div>
+            </div>
+
+            {/* ✅ NEW: Info bar below the header */}
+            {!loadingStudents && deptStudents.length > 0 && (
+              <div className="px-6 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
+                <FiShield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <p className="text-xs text-emerald-700 font-medium">
+                  "Download All with Passwords" includes: Student ID, Full Name, Email, Password, Department, Status, and Join Date.
+                  Students added before this feature will show <strong>N/A</strong> for password.
+                </p>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {["ID", "Student Name", "Email", "Join Date", "Status"].map((h) => (
+                      <th key={h} className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {loadingStudents
+                    ? Array.from({ length: 4 }).map((_, i) => (
+                        <tr key={i}>
+                          {[36, 120, 150, 70, 55].map((w, j) => (
+                            <td key={j} className="px-6 py-4">
+                              <div className="h-4 bg-gray-200 rounded-full animate-pulse" style={{ width: w }} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    : deptStudents.slice(0, 10).map((student) => {
+                        const sd = getDeptStyle(student.department);
+                        return (
+                          <tr key={student._id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-3.5">
+                              <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1
+                                ${sd.lightBg} ${sd.text} text-xs font-black rounded-lg font-mono`}>
+                                {student.studentId ?? "—"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-8 h-8 rounded-lg ${sd.lightBg} flex items-center justify-center shrink-0`}>
+                                  <span className={`text-sm font-bold ${sd.text}`}>
+                                    {(student.name || student.fullName)?.[0]?.toUpperCase()}
+                                  </span>
+                                </div>
+                                <span className="text-sm font-medium text-gray-800">
+                                  {student.name || student.fullName}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3.5 text-sm text-gray-500">{student.email}</td>
+                            <td className="px-6 py-3.5 text-sm text-gray-400">
+                              {student.joinDate || student.createdAt?.split("T")[0] || "—"}
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <span className={`px-2.5 py-1 text-xs font-bold rounded-full
+                                ${student.status === "active"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-500"}`}>
+                                {student.status === "active" ? "Active" : "Inactive"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            {deptStudents.length > 10 && (
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 text-center">
+                <button className={`text-sm font-semibold ${deptStyle.text} hover:underline transition-colors`}>
+                  View all {deptStudents.length} students →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AddStudent;
