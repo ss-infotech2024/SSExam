@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance
 const API = axios.create({
-  baseURL: "http://localhost:5000/api", // 🔹 Change when deployed
+  baseURL: import.meta.env.VITE_API_URL || "https://ssexam.onrender.com/api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
